@@ -32,7 +32,7 @@ const ChatPage: React.FC = memo(() => {
   // Use a stable reference for the key to prevent unnecessary re-renders
   const chatKey = selectedChatId ? `${selectedChatId}-${selectedChatType}` : 'no-chat';
 
-  const { messages, loadingMessages, sendMessage } = useChatMessages(selectedChatId, selectedChatType);
+  const { messages, loadingMessages, sendMessage, isSending } = useChatMessages(selectedChatId, selectedChatType);
 
   const markChatAsRead = useCallback(async (chatId: string, chatType: 'public' | 'private') => {
     if (!currentUserId || isGuest) return;
@@ -99,11 +99,10 @@ const ChatPage: React.FC = memo(() => {
   }, [currentUserId, supabase]);
 
   const handleSelectChat = useCallback((chatId: string, chatName: string, chatType: 'public' | 'private') => {
-  setSelectedChatId(chatId);
-  setSelectedChatName(chatName);
-  setSelectedChatType(chatType);
-  markChatAsRead(chatId, chatType); // Mark as read when selected
-  window.dispatchEvent(new Event('sidebar:refetch'));
+    setSelectedChatId(chatId);
+    setSelectedChatName(chatName);
+    setSelectedChatType(chatType);
+    markChatAsRead(chatId, chatType);
   }, [markChatAsRead]);
 
   const handleSendMessage = async (content: string) => {
@@ -171,7 +170,7 @@ const ChatPage: React.FC = memo(() => {
                 ) : (
                   <MessageList key={chatKey} messages={messages} currentUserId={currentUserId} />
                 )}
-                <MessageInput onSendMessage={handleSendMessage} />
+                <MessageInput onSendMessage={handleSendMessage} isSending={isSending} />
               </>
             ) : (
               <div className="flex-1 flex items-center justify-center text-muted-foreground p-4">

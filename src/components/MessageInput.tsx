@@ -7,26 +7,28 @@ import { Send } from "lucide-react";
 import { useSession } from '@/components/SessionContextProvider';
 
 interface MessageInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: (message: string) => Promise<void> | void;
+  isSending?: boolean;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
+const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending = false }) => {
   const { isGuest } = useSession();
   const [message, setMessage] = useState('');
 
-  const handleSend = useCallback(() => {
-    if (message.trim() && !isGuest) {
-      onSendMessage(message.trim());
+  const handleSend = useCallback(async () => {
+    if (message.trim() && !isGuest && !isSending) {
+      const content = message.trim();
       setMessage('');
+      await onSendMessage(content);
     }
-  }, [message, onSendMessage, isGuest]);
+  }, [message, onSendMessage, isGuest, isSending]);
 
   const handleKeyPress = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey && !isGuest) {
+    if (e.key === 'Enter' && !e.shiftKey && !isGuest && !isSending) {
       e.preventDefault();
       handleSend();
     }
-  }, [handleSend, isGuest]);
+  }, [handleSend, isGuest, isSending]);
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (!isGuest) {
@@ -67,10 +69,14 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
         />
         <Button 
           onClick={handleSend} 
-          disabled={!message.trim()} 
-          className="h-10 w-10 rounded-full bg-accent-primary hover:bg-[hsl(var(--accent-primary)_/_0.9)]"
+          disabled={!message.trim() || isSending} 
+          className="h-10 w-10 rounded-full bg-accent-primary hover:bg-[hsl(var(--accent-primary)_/_0.9)] disabled:opacity-50"
         >
-          <Send className="h-4 w-4" />
+          {isSending ? (
+            <span className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
           <span className="sr-only">Send message</span>
         </Button>
       </div>
