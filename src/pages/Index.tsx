@@ -1,20 +1,16 @@
 "use client";
 
-
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSession } from '@/components/SessionContextProvider';
-import '@/prochat-welcome.css';
+import { MessageCircle, Zap, Shield, Users, ArrowRight, Globe } from 'lucide-react';
 
 const Index: React.FC = () => {
-  const { session, loginAsGuest } = useSession(); // Get session and loginAsGuest 
+  const { session, loginAsGuest } = useSession();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // If a session exists, redirect to the chat page
-    if (session) {
-      navigate('/chat');
-    }
+    if (session) navigate('/chat');
   }, [session, navigate]);
 
   const handleGuestLogin = React.useCallback(async () => {
@@ -22,64 +18,91 @@ const Index: React.FC = () => {
     navigate('/chat/guest');
   }, [loginAsGuest, navigate]);
 
-  // If loading or already logged in (and redirecting), don't render anything yet
-  if (session) {
-    return null;
-  }
+  if (session) return null;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground relative overflow-hidden">
-      {/* Animated Blobs */}
-      <div className="prochat-blob prochat-blob1" />
-      <div className="prochat-blob prochat-blob2" />
-      <div className="prochat-blob prochat-blob3" />
-
-      <main className="relative z-10 flex flex-col items-center justify-center w-full max-w-2xl px-6 py-16">
-        <h1 className="prochat-hero text-6xl md:text-8xl font-black mb-4 leading-tight tracking-tight prochat-glow select-none drop-shadow-xl">
-          Prochat
-        </h1>
-        <p className="text-2xl md:text-3xl font-light mb-7 animate-fade-in text-center max-w-2xl mx-auto opacity-95 drop-shadow-sm">
-          <span className="font-semibold text-accent">Welcome!</span> Experience next-gen real-time chat with <span className="text-primary font-bold">Prochat</span>.<br/>
-          <span className="text-muted-foreground">A <span className="text-accent font-bold">self-practice project</span> by Touseef.</span>
-        </p>
-        <div className="mb-12 animate-fade-in flex flex-col items-center gap-2">
-          <span className="text-base md:text-lg text-muted-foreground flex items-center gap-2">
-            <span className="inline-block animate-bounce">🚀</span> Lightning fast.
-            <span className="inline-block animate-pulse">💬</span> Real-time.
-            <span className="inline-block animate-spin-slow">🌗</span> Beautiful in dark & light.
-          </span>
-          <span className="text-base md:text-lg text-muted-foreground">Open source. Secure. Made with <span className="text-red-400">❤️</span> in Pakistan.</span>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Nav */}
+      <nav className="flex items-center justify-between px-6 py-4 border-b border-border/50 backdrop-blur-sm sticky top-0 z-50 bg-background/80">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-[hsl(var(--accent-primary))] flex items-center justify-center">
+            <MessageCircle className="w-4 h-4 text-white" />
+          </div>
+          <span className="font-bold text-lg tracking-tight">Prochat</span>
         </div>
-        <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-8 justify-center animate-fade-in">
+        <div className="flex items-center gap-3">
           <Link to="/login">
-            <button className="btn-accent text-lg px-10 py-4 shadow-2xl rounded-full font-semibold hover:scale-110 hover:shadow-accent transition-transform duration-200">
-              Login
+            <button className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-lg hover:bg-accent/50">
+              Sign in
             </button>
           </Link>
           <Link to="/register">
-            <button className="btn-accent-outline text-lg px-10 py-4 shadow-2xl rounded-full font-semibold hover:scale-110 hover:shadow-accent transition-transform duration-200">
-              Sign Up
+            <button className="text-sm font-semibold px-4 py-2 rounded-lg bg-[hsl(var(--accent-primary))] text-white hover:opacity-90 transition-opacity">
+              Get started
             </button>
           </Link>
         </div>
-        
-        {/* Guest button */}
-        <div className="mt-6 animate-fade-in">
-          <button 
-            onClick={handleGuestLogin}
-            className="btn-accent-outline text-lg px-10 py-4 shadow-2xl rounded-full font-semibold hover:scale-110 hover:shadow-accent transition-transform duration-200 opacity-80 hover:opacity-100"
-          >
-            Continue as Guest
-          </button>
+      </nav>
+
+      {/* Hero */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[hsl(var(--accent-primary)/0.1)] border border-[hsl(var(--accent-primary)/0.2)] text-[hsl(var(--accent-primary))] text-xs font-medium mb-8">
+          <Zap className="w-3 h-3" />
+          Real-time messaging, zero delay
         </div>
-        <div className="mt-16 text-center text-base md:text-lg text-muted-foreground animate-fade-in max-w-xl mx-auto">
-          <p>
-            <span className="font-semibold text-primary">Prochat</span> is a modern chat app built for speed, privacy, and fun.<br/>
-            Designed & developed as a <span className="text-accent font-bold">self-practice project</span> by <span className="text-accent font-bold">Touseef</span>.<br/>
-            <span className="italic text-sm text-muted-foreground">“Connect. Chat. Collaborate.”</span>
-          </p>
+
+        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 max-w-3xl leading-[1.05]">
+          Chat that feels{' '}
+          <span className="text-[hsl(var(--accent-primary))]">instant.</span>
+        </h1>
+
+        <p className="text-lg md:text-xl text-muted-foreground max-w-xl mb-10 leading-relaxed">
+          Public rooms, private messages, real-time updates. Built for speed and simplicity.
+        </p>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
+          <Link to="/register">
+            <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[hsl(var(--accent-primary))] text-white font-semibold hover:opacity-90 transition-all hover:scale-[1.02] shadow-lg shadow-[hsl(var(--accent-primary)/0.25)]">
+              Create free account
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </Link>
+          <Link to="/login">
+            <button className="flex items-center gap-2 px-6 py-3 rounded-xl border border-border font-semibold hover:bg-accent/50 transition-all">
+              Sign in
+            </button>
+          </Link>
+        </div>
+
+        <button
+          onClick={handleGuestLogin}
+          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Globe className="w-4 h-4" />
+          Continue as guest — no account needed
+        </button>
+
+        {/* Feature cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-20 max-w-3xl w-full">
+          {[
+            { icon: Zap, title: 'Instant delivery', desc: 'Messages appear in real-time via Supabase Realtime' },
+            { icon: Shield, title: 'Private chats', desc: 'One-on-one conversations with row-level security' },
+            { icon: Users, title: 'Public rooms', desc: 'Join open channels and chat with everyone' },
+          ].map(({ icon: Icon, title, desc }) => (
+            <div key={title} className="p-5 rounded-2xl border border-border/60 bg-card text-left hover:border-[hsl(var(--accent-primary)/0.4)] transition-colors">
+              <div className="w-9 h-9 rounded-lg bg-[hsl(var(--accent-primary)/0.1)] flex items-center justify-center mb-3">
+                <Icon className="w-4 h-4 text-[hsl(var(--accent-primary))]" />
+              </div>
+              <p className="font-semibold text-sm mb-1">{title}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
+            </div>
+          ))}
         </div>
       </main>
+
+      <footer className="text-center py-6 text-xs text-muted-foreground border-t border-border/50">
+        Built by <span className="font-medium text-foreground">Touseef Ur Rehman</span> · Pakistan 🇵🇰
+      </footer>
     </div>
   );
 };

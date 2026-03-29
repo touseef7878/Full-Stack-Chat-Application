@@ -2,18 +2,10 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, User, LogOut, Sun, Moon } from 'lucide-react'; // Added Sun and Moon icons
+import { Settings, User, LogOut, Sun, Moon, Camera, Upload } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import { showError, showSuccess } from '@/utils/toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,8 +13,8 @@ import { Separator } from '@/components/ui/separator';
 import ChatDataManagementSection from './ChatDataManagementSection';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
-import { Switch } from "@/components/ui/switch"; // Import Switch
-import { useTheme } from "next-themes"; // Import useTheme
+import { Switch } from "@/components/ui/switch";
+import { useTheme } from "next-themes";
 
 interface ProfileSettingsDialogProps {
   onProfileUpdated: () => void;
@@ -36,10 +28,12 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
   const [avatarUrl, setAvatarUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { supabase, session } = useSession();
   const currentUserId = session?.user?.id;
   const navigate = useNavigate();
-  const { theme, setTheme } = useTheme(); // Use the theme hook
+  const { theme, setTheme } = useTheme();
 
   const fetchProfile = useCallback(async () => {
     if (!currentUserId) return;
@@ -48,197 +42,231 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
       .from('profiles')
       .select('first_name, last_name, username, avatar_url')
       .eq('id', currentUserId);
-
-    if (error) {
-      showError("Failed to load profile: " + error.message);
-      console.error("Error fetching profile:", error);
-    } else if (data && data.length > 0) {
-      const profile = data[0];
-      setFirstName(profile.first_name || '');
-      setLastName(profile.last_name || '');
-      setUsername(profile.username || '');
-      setAvatarUrl(profile.avatar_url || '');
-    } else {
-      setFirstName('');
-      setLastName('');
-      setUsername('');
-      setAvatarUrl('');
-      console.warn(`[ProfileSettingsDialog] No profile found for user ID: ${currentUserId}. Initializing with empty fields.`);
+    if (!error && data?.length > 0) {
+      const p = data[0];
+      setFirstName(p.first_name || '');
+      setLastName(p.last_name || '');
+      setUsername(p.username || '');
+      setAvatarUrl(p.avatar_url || '');
     }
     setLoading(false);
   }, [currentUserId, supabase]);
 
-  useEffect(() => {
-    if (open) {
-      fetchProfile();
-    }
-  }, [open, fetchProfile]);
+  useEffect(() => { if (open) fetchProfile(); }, [open, fetchProfile]);
 
   const handleSave = async () => {
-    if (!currentUserId) {
-      showError("You must be logged in to update your profile.");
-      return;
-    }
-    if (!username.trim()) {
-      showError("Username cannot be empty.");
-      return;
-    }
-
+    if (!currentUserId) return;
+    if (!username.trim()) { showError("Username cannot be empty."); return; }
     setIsSaving(true);
     const { error } = await supabase
       .from('profiles')
-      .update({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        username: username.trim(),
-        avatar_url: avatarUrl.trim(),
-        updated_at: new Date().toISOString(),
-      })
+      .update({ first_name: firstName.trim(), last_name: lastName.trim(), username: username.trim(), avatar_url: avatarUrl.trim(), updated_at: new Date().toISOString() })
       .eq('id', currentUserId);
-
-    if (error) {
-      showError("Failed to update profile: " + error.message);
-      console.error("Error updating profile:", error);
-    } else {
-      showSuccess("Profile updated successfully!");
-      setOpen(false);
-      onProfileUpdated();
-    }
+    if (error) showError("Failed to update: " + error.message);
+    else { showSuccess("Profile updated!"); setOpen(false); onProfileUpdated(); }
     setIsSaving(false);
   };
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
-    if (error) {
-      showError("Failed to log out: " + error.message);
-      console.error("Error logging out:", error);
-    } else {
-      showSuccess("You have been logged out successfully!");
-      setOpen(false);
-      onProfileUpdated(); // Still call this for any parent component cleanup
-      navigate('/'); // Explicitly navigate to the home page
-    }
+    if (error) { showError("Failed to log out: " + error.message); return; }
+    showSuccess("Logged out successfully.");
+    setOpen(false);
+    navigate('/');
   };
 
-  const defaultAvatar = `https://api.dicebear.com/7.x/lorelei/svg?seed=${username || 'user'}`;
+  const isEmail = (str: string) => /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(str);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !currentUserId) return;
+    if (file.size > 2 * 1024 * 1024) { showError("Image must be under 2MB."); return; }
+
+    setIsUploadingAvatar(true);
+    const ext = file.name.split('.').pop();
+    const path = `avatars/${currentUserId}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(path, file, { upsert: true });
+
+    if (uploadError) {
+      // Fallback: convert to base64 data URL if storage bucket not set up
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        if (ev.target?.result) setAvatarUrl(ev.target.result as string);
+      };
+      reader.readAsDataURL(file);
+      setIsUploadingAvatar(false);
+      return;
+    }
+
+    const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+    setAvatarUrl(data.publicUrl);
+    setIsUploadingAvatar(false);
+    showSuccess("Avatar uploaded!");
+  };
+
+  const displayName = firstName
+    ? `${firstName}${lastName ? ' ' + lastName : ''}`
+    : (username && !isEmail(username)) ? username : null;
+
+  const defaultAvatar = `https://api.dicebear.com/7.x/lorelei/svg?seed=${currentUserId || 'user'}`;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="ml-2">
-          <Settings className="h-5 w-5" />
-          <span className="sr-only">Profile Settings</span>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-accent/60" title="Settings">
+          <Settings className="h-4 w-4" />
+          <span className="sr-only">Settings</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] shadow-lg border-border">
-        <DialogHeader>
-          <DialogTitle>Profile Settings</DialogTitle>
-          <DialogDescription>
-            Manage your profile and chat data.
-          </DialogDescription>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-0">
+          <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
         </DialogHeader>
+
         {loading ? (
-          <div className="py-8 text-center text-muted-foreground">Loading profile...</div>
+          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading…</div>
         ) : (
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="grid gap-4 py-4">
-              {/* Profile Update Section */}
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Update Profile</h3>
-                <div className="flex justify-center mb-4">
-                  <Avatar className="h-24 w-24">
-                    <AvatarImage src={avatarUrl || defaultAvatar} alt={username} />
-                    <AvatarFallback><User className="h-12 w-12" /></AvatarFallback>
+          <ScrollArea className="max-h-[80vh]">
+            <div className="px-6 pb-6 space-y-6 pt-4">
+
+              {/* Avatar + name preview */}
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/40 border border-border/50">
+                <div className="relative">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={avatarUrl || defaultAvatar} alt={displayName || 'User'} />
+                    <AvatarFallback className="text-lg bg-[hsl(var(--accent-primary)/0.15)]">
+                      <User className="h-7 w-7 text-[hsl(var(--accent-primary))]" />
+                    </AvatarFallback>
                   </Avatar>
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="firstName" className="text-right">
-                    First Name
-                  </Label>
-                  <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g., John"
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-[hsl(var(--accent-primary))] flex items-center justify-center ring-2 ring-background hover:opacity-90 transition-opacity"
+                    title="Upload photo"
+                  >
+                    {isUploadingAvatar
+                      ? <span className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin" />
+                      : <Camera className="w-3 h-3 text-white" />
+                    }
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="lastName" className="text-right">
-                    Last Name
-                  </Label>
-                  <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g., Doe"
-                  />
+                <div className="min-w-0">
+                  {displayName ? (
+                    <>
+                      <p className="font-semibold truncate">{displayName}</p>
+                      <p className="text-xs text-muted-foreground truncate">{session?.user?.email}</p>
+                    </>
+                  ) : (
+                    <p className="font-semibold truncate">{session?.user?.email}</p>
+                  )}
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs text-[hsl(var(--accent-primary))] hover:underline mt-1 flex items-center gap-1"
+                  >
+                    <Upload className="w-3 h-3" />
+                    Upload photo
+                  </button>
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="username" className="text-right">
-                    Username
-                  </Label>
-                  <Input
-                    id="username"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="col-span-3"
-                    placeholder="e.g., johndoe"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="avatarUrl" className="text-right">
-                    Avatar URL
-                  </Label>
-                  <Input
-                    id="avatarUrl"
-                    value={avatarUrl}
-                    onChange={(e) => setAvatarUrl(e.target.value)}
-                    className="col-span-3"
-                    placeholder="Optional: URL to your avatar image"
-                  />
-                </div>
-                <DialogFooter className="mt-4">
-                  <Button variant="outline" onClick={() => setOpen(false)} disabled={isSaving}>Cancel</Button>
-                  <Button type="submit" onClick={handleSave} disabled={isSaving || loading}>
-                    {isSaving ? 'Saving...' : 'Save changes'}
-                  </Button>
-                </DialogFooter>
               </div>
 
-              <Separator className="my-4" />
-
-              {/* Display Settings Section */}
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Display Settings</h3>
-                <div className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="flex items-center space-x-2">
-                    {theme === 'dark' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                    <Label htmlFor="dark-mode-switch">Dark Mode</Label>
+              {/* Profile fields */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Profile</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="firstName" className="text-xs font-medium">First name</Label>
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" className="rounded-lg h-9 text-sm" />
                   </div>
-                  <Switch
-                    id="dark-mode-switch"
-                    checked={theme === 'dark'}
-                    onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
-                  />
+                  <div className="space-y-1.5">
+                    <Label htmlFor="lastName" className="text-xs font-medium">Last name</Label>
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" className="rounded-lg h-9 text-sm" />
+                  </div>
                 </div>
-              </div>
-
-              <Separator className="my-4" />
-
-              {/* Chat Data Management Section */}
-              <ChatDataManagementSection onChatDataCleared={onProfileUpdated} />
-
-              <Separator className="my-4" />
-
-              {/* Logout Section */}
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold">Account Actions</h3>
-                <Button variant="outline" className="w-full justify-start" onClick={handleLogout}>
-                  <LogOut className="mr-2 h-4 w-4" /> Logout
+                <div className="space-y-1.5">
+                  <Label htmlFor="username" className="text-xs font-medium">Username</Label>
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">@</span>
+                    <Input
+                      id="username"
+                      value={isEmail(username) ? '' : username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="johndoe"
+                      className="rounded-lg h-9 text-sm pl-7"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="avatarUrl" className="text-xs font-medium">Avatar URL <span className="text-muted-foreground font-normal">(optional)</span></Label>
+                  <Input id="avatarUrl" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" className="rounded-lg h-9 text-sm" />
+                </div>
+                <Button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="w-full rounded-lg bg-[hsl(var(--accent-primary))] hover:bg-[hsl(var(--accent-primary)/0.85)] text-white h-9"
+                >
+                  {isSaving ? 'Saving…' : 'Save profile'}
                 </Button>
               </div>
+
+              <Separator />
+
+              {/* Appearance */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Appearance</p>
+                <div className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-card">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                      {theme === 'dark' ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Dark mode</p>
+                      <p className="text-xs text-muted-foreground">{theme === 'dark' ? 'Currently dark' : 'Currently light'}</p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={theme === 'dark'}
+                    onCheckedChange={(c) => setTheme(c ? 'dark' : 'light')}
+                  />
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Chat data */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Data</p>
+                <ChatDataManagementSection onChatDataCleared={onProfileUpdated} />
+              </div>
+
+              <Separator />
+
+              {/* Account */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Account</p>
+                <button
+                  onClick={handleLogout}
+                  className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/60 hover:bg-destructive/5 hover:border-destructive/30 transition-colors text-left group"
+                >
+                  <div className="w-8 h-8 rounded-lg bg-destructive/10 flex items-center justify-center group-hover:bg-destructive/15">
+                    <LogOut className="h-4 w-4 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-destructive">Sign out</p>
+                    <p className="text-xs text-muted-foreground">You'll be redirected to the home page</p>
+                  </div>
+                </button>
+              </div>
+
             </div>
           </ScrollArea>
         )}

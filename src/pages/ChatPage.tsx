@@ -1,33 +1,22 @@
 "use client";
 
 import React, { useState, useCallback, memo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ChatLayout from '@/components/layout/ChatLayout';
-import { MadeWithProchat } from '@/components/MadeWithProchat';
 import MessageInput from '@/components/MessageInput';
 import MessageList from '@/components/MessageList';
 import { showError } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { useChatMessages } from '@/hooks/useChatMessages';
 
 // Dynamically import Sidebar to reduce initial bundle size
 const Sidebar = React.lazy(() => import('@/components/Sidebar'));
 
-interface PrivateChatNotificationQueryResult {
-  user1: Array<{ id: string; username: string; first_name?: string }> | null; // Changed to array
-  user2: Array<{ id: string; username: string; first_name?: string }> | null; // Changed to array
-}
-
 const ChatPage: React.FC = memo(() => {
   const { supabase, session, isGuest } = useSession();
-  const navigate = useNavigate();
   const [selectedChatId, setSelectedChatId] = useState<string | undefined>(undefined);
   const [selectedChatName, setSelectedChatName] = useState<string | undefined>(undefined);
   const [selectedChatType, setSelectedChatType] = useState<'public' | 'private' | undefined>(undefined);
-
   const currentUserId = session?.user?.id;
-  const isMobile = useIsMobile();
 
   // Use a stable reference for the key to prevent unnecessary re-renders
   const chatKey = selectedChatId ? `${selectedChatId}-${selectedChatType}` : 'no-chat';
@@ -135,37 +124,40 @@ const ChatPage: React.FC = memo(() => {
           onBackToSidebar={handleBackToSidebar}
         >
           <div className="flex h-full flex-col">
-            <div className="flex items-center h-16 border-b border-border px-4 bg-card/70 backdrop-blur-sm">
+            {/* Chat header */}
+            <div className="flex items-center h-14 border-b border-border px-4 bg-card/80 backdrop-blur-sm flex-shrink-0">
               {selectedChatName ? (
-                <div className="flex items-center gap-3">
-                  <div className="relative">
-                    <div className="h-10 w-10 rounded-full ring-2 ring-border overflow-hidden">
-                      <img 
-                        src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${selectedChatName}`} 
-                        alt={selectedChatName} 
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <div className="h-9 w-9 rounded-full overflow-hidden ring-2 ring-border/50">
+                      <img
+                        src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${selectedChatName}`}
+                        alt={selectedChatName}
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full ring-2 ring-background"></div>
+                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full ring-2 ring-background" />
                   </div>
-                  <div>
-                    <h2 className="text-lg font-semibold leading-none">
-                      {selectedChatType === 'public' ? `${selectedChatName}` : `${selectedChatName}`}
-                    </h2>
-                    <p className="text-xs text-muted-foreground leading-none">
-                      {selectedChatType === 'public' ? 'Public room' : 'Online'}
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold leading-none truncate">{selectedChatName}</h2>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">
+                      {selectedChatType === 'public' ? 'Public room' : 'Direct message'}
                     </p>
                   </div>
                 </div>
               ) : (
-                <h2 className="text-xl font-semibold text-muted-foreground">Select a chat</h2>
+                <p className="text-sm text-muted-foreground">Select a conversation</p>
               )}
             </div>
+
             {selectedChatId && selectedChatType ? (
               <>
                 {loadingMessages && messages.length === 0 ? (
-                  <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                    <p>Loading messages...</p>
+                  <div className="flex-1 flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-3 text-muted-foreground">
+                      <div className="w-8 h-8 border-2 border-[hsl(var(--accent-primary))] border-t-transparent rounded-full animate-spin" />
+                      <p className="text-sm">Loading messages…</p>
+                    </div>
                   </div>
                 ) : (
                   <MessageList key={chatKey} messages={messages} currentUserId={currentUserId} />
@@ -173,13 +165,14 @@ const ChatPage: React.FC = memo(() => {
                 <MessageInput onSendMessage={handleSendMessage} isSending={isSending} />
               </>
             ) : (
-              <div className="flex-1 flex items-center justify-center text-muted-foreground p-4">
-                <p className="text-center">Start by selecting a chat from the sidebar or create a new one.</p>
-              </div>
-            )}
-            {!isMobile && (
-              <div className="footer">
-                Made with ❤️ by Touseef
+              <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 gap-3">
+                <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mb-2">
+                  <svg className="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                  </svg>
+                </div>
+                <p className="font-medium text-sm">No conversation selected</p>
+                <p className="text-xs text-center max-w-xs">Pick a public room or start a direct message from the sidebar</p>
               </div>
             )}
           </div>

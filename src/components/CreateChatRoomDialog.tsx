@@ -1,19 +1,11 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PlusCircle } from 'lucide-react';
+import { Hash } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -22,68 +14,68 @@ interface CreateChatRoomDialogProps {
 }
 
 const CreateChatRoomDialog: React.FC<CreateChatRoomDialogProps> = ({ onChatRoomCreated }) => {
-  const [open, setOpen] = React.useState(false);
-  const [chatRoomName, setChatRoomName] = React.useState('');
+  const [open, setOpen] = useState(false);
+  const [chatRoomName, setChatRoomName] = useState('');
+  const [loading, setLoading] = useState(false);
   const { supabase, session } = useSession();
 
-  const handleCreateChatRoom = async () => {
-    if (!chatRoomName.trim()) {
-      showError("Chat room name cannot be empty.");
-      return;
-    }
-    if (!session?.user?.id) {
-      showError("You must be logged in to create a chat room.");
-      return;
-    }
-
-    const { error } = await supabase // 'data' is no longer destructured as it's not used
+  const handleCreate = async () => {
+    if (!chatRoomName.trim()) { showError("Room name cannot be empty."); return; }
+    if (!session?.user?.id) { showError("You must be logged in."); return; }
+    setLoading(true);
+    const { error } = await supabase
       .from('chat_rooms')
       .insert({ name: chatRoomName.trim(), creator_id: session.user.id })
       .select();
-
-    if (error) {
-      showError("Failed to create chat room: " + error.message);
-      console.error("Error creating chat room:", error);
-    } else {
-      showSuccess(`Chat room "${chatRoomName}" created successfully!`);
-      setChatRoomName('');
-      setOpen(false);
-      onChatRoomCreated(); // Notify parent component to refresh chat list
-    }
+    setLoading(false);
+    if (error) { showError("Failed to create room: " + error.message); return; }
+    showSuccess(`#${chatRoomName} created!`);
+    setChatRoomName('');
+    setOpen(false);
+    onChatRoomCreated();
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="ml-auto">
-          <PlusCircle className="h-5 w-5" />
-          <span className="sr-only">Create new chat room</span>
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-accent/60" title="Create public room">
+          <Hash className="h-4 w-4" />
+          <span className="sr-only">Create room</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] shadow-lg border-border">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Create New Chat Room</DialogTitle>
-          <DialogDescription>
-            Enter a name for your new chat room.
-          </DialogDescription>
+          <DialogTitle className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-[hsl(var(--accent-primary)/0.1)] flex items-center justify-center">
+              <Hash className="w-4 h-4 text-[hsl(var(--accent-primary))]" />
+            </div>
+            New public room
+          </DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-4 items-center gap-4">
-            <Label htmlFor="name" className="text-right">
-              Name
-            </Label>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="room-name" className="text-sm font-medium">Room name</Label>
             <Input
-              id="name"
+              id="room-name"
               value={chatRoomName}
               onChange={(e) => setChatRoomName(e.target.value)}
-              className="col-span-3"
-              placeholder="e.g., Team Discussion"
+              onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+              placeholder="e.g. general, random, dev-talk"
+              className="rounded-lg"
+              autoFocus
             />
           </div>
+          <div className="flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setOpen(false)} className="rounded-lg">Cancel</Button>
+            <Button
+              onClick={handleCreate}
+              disabled={!chatRoomName.trim() || loading}
+              className="rounded-lg bg-[hsl(var(--accent-primary))] hover:bg-[hsl(var(--accent-primary)/0.85)] text-white"
+            >
+              {loading ? 'Creating…' : 'Create room'}
+            </Button>
+          </div>
         </div>
-        <DialogFooter>
-          <Button type="submit" onClick={handleCreateChatRoom}>Create</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

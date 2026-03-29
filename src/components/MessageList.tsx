@@ -23,73 +23,120 @@ interface MessageListProps {
   currentUserId: string | undefined;
 }
 
+const isEmail = (str: string) => /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(str);
+
 const getDisplayName = (profile: Message['profile'], userId: string) => {
-  if (!profile) return `User ${userId.slice(0, 8)}`;
-  const isEmail = (str: string) => /^[[\w-\.]+@([[\w-]+.)+[\w-]{2,4}$/.test(str);
+  if (!profile) return `User ${userId.slice(0, 6)}`;
   if (profile.first_name) return profile.first_name;
   if (profile.username && !isEmail(profile.username)) return profile.username;
-  return `User ${userId.slice(0, 8)}`;
+  return `User ${userId.slice(0, 6)}`;
+};
+
+const formatTime = (iso: string) => {
+  const d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 };
 
 const MessageList: React.FC<MessageListProps> = ({ messages, currentUserId }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom when messages change using a more efficient approach
   useEffect(() => {
-    // Use a timeout to ensure the DOM is updated before scrolling
     const timer = setTimeout(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, 10);
     return () => clearTimeout(timer);
   }, [messages]);
 
+  if (messages.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground gap-2 p-8">
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-2">
+          <svg className="w-6 h-6 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </div>
+        <p className="text-sm font-medium">No messages yet</p>
+        <p className="text-xs">Be the first to say something!</p>
+      </div>
+    );
+  }
+
   return (
-    <ScrollArea className="flex-1 p-4 bg-background">
-      <div className="space-y-4">
-        {messages.map((message) => {
+    <ScrollArea className="flex-1 bg-background">
+      <div className="px-4 py-4 space-y-1">
+        {messages.map((message, index) => {
           const isCurrentUser = message.sender_id === currentUserId;
-          
           const senderName = isCurrentUser ? 'You' : getDisplayName(message.profile, message.sender_id);
-          
-          const senderAvatar = message.profile?.avatar_url || `https://api.dicebear.com/7.x/lorelei/svg?seed=${senderName}`;
+          const senderAvatar = message.profile?.avatar_url || `https://api.dicebear.com/7.x/lorelei/svg?seed=${message.sender_id}`;
+          const isTemp = message.id.startsWith('temp-');
+
+          // Group consecutive messages from same sender
+          const prevMsg = messages[index - 1];
+          const isFirstInGroup = !prevMsg || prevMsg.sender_id !== message.sender_id;
 
           return (
             <div
               key={message.id}
               className={cn(
-                "flex items-start gap-3",
-                isCurrentUser ? "justify-end" : "justify-start"
+                "flex items-end gap-2",
+                isCurrentUser ? "justify-end" : "justify-start",
+                isFirstInGroup ? "mt-4" : "mt-0.5"
               )}
             >
+              {/* Avatar for others — only on first in group */}
               {!isCurrentUser && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={senderAvatar} alt={senderName} />
-                  <AvatarFallback>{senderName.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <div className="w-7 flex-shrink-0">
+                  {isFirstInGroup && (
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={senderAvatar} alt={senderName} />
+                      <AvatarFallback className="text-[10px] bg-accent/20">{senderName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
               )}
-              <div
-                className={cn(
-                  "max-w-[70%] p-4 text-sm rounded-3xl relative", 
-                  isCurrentUser
-                    ? "bg-accent-primary text-white rounded-br-none message-outgoing" 
-                    : "bg-card text-foreground rounded-bl-none border border-sidebar-border/50 message-incoming"
+
+              <div className={cn("flex flex-col max-w-[72%]", isCurrentUser ? "items-end" : "items-start")}>
+                {/* Name + time — only on first in group */}
+                {isFirstInGroup && (
+                  <div className={cn("flex items-baseline gap-2 mb-1 px-1", isCurrentUser ? "flex-row-reverse" : "flex-row")}>
+                    <span className="text-[11px] font-semibold text-foreground/70">{senderName}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatTime(message.created_at)}</span>
+                  </div>
                 )}
-              >
-                <p className="font-medium text-xs mb-1 opacity-80">
-                  {senderName}
-                </p>
-                <p>{message.content}</p>
+
+                <div
+                  className={cn(
+                    "px-3.5 py-2.5 text-sm leading-relaxed break-words",
+                    isCurrentUser
+                      ? "bg-[hsl(var(--accent-primary))] text-white rounded-2xl rounded-br-sm"
+                      : "bg-card border border-border/60 text-foreground rounded-2xl rounded-bl-sm",
+                    isTemp && "opacity-60"
+                  )}
+                >
+                  {message.content}
+                </div>
+
+                {/* Time for non-first messages */}
+                {!isFirstInGroup && (
+                  <span className="text-[10px] text-muted-foreground mt-0.5 px-1">{formatTime(message.created_at)}</span>
+                )}
               </div>
+
+              {/* Avatar for current user — only on first in group */}
               {isCurrentUser && (
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={senderAvatar} alt={senderName} />
-                  <AvatarFallback>{senderName.charAt(0)}</AvatarFallback>
-                </Avatar>
+                <div className="w-7 flex-shrink-0">
+                  {isFirstInGroup && (
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={senderAvatar} alt={senderName} />
+                      <AvatarFallback className="text-[10px] bg-[hsl(var(--accent-primary)/0.2)]">{senderName.charAt(0).toUpperCase()}</AvatarFallback>
+                    </Avatar>
+                  )}
+                </div>
               )}
             </div>
           );
         })}
-        <div ref={messagesEndRef} /> {/* Invisible element to scroll to */}
+        <div ref={messagesEndRef} />
       </div>
     </ScrollArea>
   );
