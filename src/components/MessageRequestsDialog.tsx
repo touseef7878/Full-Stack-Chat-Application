@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Check, X, Inbox } from 'lucide-react';
@@ -90,6 +90,7 @@ const MessageRequestsDialog: React.FC<MessageRequestsDialogProps> = ({ onRequest
             </div>
             Message Requests
           </DialogTitle>
+          <DialogDescription className="sr-only">Pending message requests from other users</DialogDescription>
         </DialogHeader>
 
         <div className="pt-2 space-y-2 min-h-[120px]">

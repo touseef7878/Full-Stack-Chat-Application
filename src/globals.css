@@ -110,178 +110,59 @@
   }
 }
 
-/* Custom styles for Prochat - Task 4 for Prodigy Infotec */
+/* Custom styles for Prochat */
 /* Built by Touseef */
 body {
   font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
   min-height: 100vh;
+  min-height: 100dvh;
   transition: background-color 0.3s ease;
   overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* Gradient backgrounds only for auth pages */
-.auth-page {
-  background: linear-gradient(135deg, 
-    hsl(var(--primary-gradient-start)), 
-    hsl(var(--primary-gradient-end)));
-  min-height: 100vh;
+/* Prevent iOS bounce scroll on fixed layouts */
+html, body {
+  overscroll-behavior: none;
 }
 
-.dark .auth-page {
-  background: linear-gradient(135deg, 
-    hsl(250 30% 15%), 
-    hsl(280 25% 15%));
+/* Full dynamic viewport height for mobile */
+.h-screen {
+  height: 100dvh;
 }
 
-/* Set default background for all other pages */
-body:not(.auth-page) {
-  background: hsl(var(--background));
-}
-
-/* Teal/green accent button styles */
-.btn-accent {
-  background: linear-gradient(135deg, 
-    hsl(var(--accent-primary)), 
-    hsl(var(--accent-secondary)));
-  border: none;
-  border-radius: 50px;
-  padding: 0.5rem 1.5rem;
-  color: white;
-  font-weight: 600;
-  transition: all 0.2s ease-out;
-  will-change: transform;
-}
-
-.btn-accent:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px hsl(var(--accent-primary) / 0.3);
-}
-
-.btn-accent-outline {
-  background: transparent;
-  border: 2px solid hsl(var(--accent-primary));
-  border-radius: 50px;
-  padding: 0.5rem 1.5rem;
-  color: hsl(var(--accent-primary));
-  font-weight: 600;
-  transition: all 0.2s ease-out;
-  will-change: transform, background-color;
-}
-
-.btn-accent-outline:hover {
-  background: hsl(var(--accent-primary) / 0.1);
-  transform: translateY(-2px);
-}
-
-/* Form card styling */
-.form-card {
-  background: hsl(var(--card));
-  border-radius: 1rem;
-  box-shadow: 0 10px 25px hsl(240 5% 10% / 0.1);
-  padding: 2rem;
-  transition: all 0.2s ease-out;
-}
-
-.dark .form-card {
-  box-shadow: 0 10px 25px hsl(240 10% 10% / 0.3);
-}
-
-/* Input field styling */
-.input-field {
-  background: hsl(var(--background));
-  border: 1px solid hsl(var(--border));
-  border-radius: 0.5rem;
-  padding: 0.75rem 1rem;
-  transition: all 0.2s ease-out;
-}
-
-.input-field:focus {
-  outline: none;
-  border-color: hsl(var(--accent-primary));
-  box-shadow: 0 0 0 3px hsl(var(--accent-primary) / 0.2);
+/* Safe area insets for notched phones */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Chat message styling */
 .message-incoming {
   background: hsl(var(--card));
   border-radius: 1.5rem 1.5rem 1.5rem 0.25rem;
-  padding: 1rem 1.25rem;
-  max-width: 70%;
-  box-shadow: 0 4px 12px hsl(240 5% 10% / 0.1);
+  box-shadow: 0 2px 8px hsl(240 5% 10% / 0.08);
   border: 1px solid hsl(var(--border) / 0.5);
-  backdrop-filter: blur(10px);
-  transition: transform 0.15s ease-out;
 }
 
 .dark .message-incoming {
   background: hsl(var(--muted) / 0.7);
-  box-shadow: 0 4px 12px hsl(240 10% 10% / 0.2);
+  box-shadow: 0 2px 8px hsl(240 10% 10% / 0.2);
 }
 
 .message-outgoing {
   background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
   border-radius: 1.5rem 0.25rem 1.5rem 1.5rem;
-  padding: 1rem 1.25rem;
-  max-width: 70%;
-  box-shadow: 0 4px 15px hsl(var(--accent-primary) / 0.3);
+  box-shadow: 0 2px 12px hsl(var(--accent-primary) / 0.25);
   margin-left: auto;
-  transition: transform 0.15s ease-out;
 }
 
 .dark .message-outgoing {
   background: hsl(var(--accent-primary));
-  box-shadow: 0 4px 15px hsl(var(--accent-primary) / 0.4);
+  box-shadow: 0 2px 12px hsl(var(--accent-primary) / 0.35);
 }
 
-/* Footer styling */
-.footer {
-  text-align: center;
-  padding: 1rem;
-  color: hsl(var(--muted-foreground));
-  font-size: 0.875rem;
-  background: hsl(var(--card));
-  border-top: 1px solid hsl(var(--border));
-  backdrop-filter: blur(10px);
-}
-
-/* Glassmorphism effect */
-.glass {
-  background: hsl(var(--card) / 0.7);
-  backdrop-filter: blur(10px);
-  border: 1px solid hsl(var(--border) / 0.5);
-  border-radius: var(--radius);
-}
-
-/* Active chat item in sidebar */
-.sidebar-active {
-  background: hsl(var(--accent-primary) / 0.1) !important;
-  border-radius: 0.5rem;
-}
-
-/* Optimized mobile styles */
-@media (max-width: 767px) {
-  .mobile-sidebar-shown {
-    display: block !important;
-  }
-  
-  .mobile-sidebar-hidden {
-    display: none !important;
-  }
-  
-  /* Ensure chat area takes full width when sidebar is hidden */
-  .mobile-chat-full-width {
-    width: 100%;
-    margin-left: 0;
-  }
-  
-  /* Optimize for mobile performance */
-  .message-incoming, .message-outgoing {
-    max-width: 85%;
-    padding: 0.75rem 1rem;
-  }
-}
-
-/* Optimize scroll performance */
+/* Smooth scroll for message list */
 .scroll-smooth {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
@@ -289,10 +170,92 @@ body:not(.auth-page) {
 
 /* Optimized animations */
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(8px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out forwards;
+  animation: fade-in 0.25s ease-out forwards;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 767px) {
+  /* Larger touch targets */
+  button, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Message bubbles wider on mobile */
+  .message-incoming, .message-outgoing {
+    max-width: 88%;
+  }
+}
+
+/* Tablet optimizations (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .message-incoming, .message-outgoing {
+    max-width: 78%;
+  }
+}
+
+/* Glassmorphism */
+.glass {
+  background: hsl(var(--card) / 0.7);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid hsl(var(--border) / 0.5);
+  border-radius: var(--radius);
+}
+
+/* Sidebar active state */
+.sidebar-active {
+  background: hsl(var(--accent-primary) / 0.1) !important;
+  border-radius: 0.5rem;
+}
+
+/* Button styles */
+.btn-accent {
+  background: linear-gradient(135deg, hsl(var(--accent-primary)), hsl(var(--accent-secondary)));
+  border: none;
+  border-radius: 50px;
+  padding: 0.625rem 1.5rem;
+  color: white;
+  font-weight: 600;
+  transition: all 0.2s ease-out;
+  touch-action: manipulation;
+}
+
+.btn-accent:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px hsl(var(--accent-primary) / 0.3);
+}
+
+.btn-accent:active {
+  transform: translateY(0);
+}
+
+.btn-accent-outline {
+  background: transparent;
+  border: 2px solid hsl(var(--accent-primary));
+  border-radius: 50px;
+  padding: 0.625rem 1.5rem;
+  color: hsl(var(--accent-primary));
+  font-weight: 600;
+  transition: all 0.2s ease-out;
+  touch-action: manipulation;
+}
+
+.btn-accent-outline:hover {
+  background: hsl(var(--accent-primary) / 0.1);
+  transform: translateY(-1px);
+}
+
+.btn-accent-outline:active {
+  transform: translateY(0);
 }

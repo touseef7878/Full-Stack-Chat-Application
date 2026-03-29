@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Hash } from 'lucide-react';
@@ -51,6 +51,7 @@ const CreateChatRoomDialog: React.FC<CreateChatRoomDialogProps> = ({ onChatRoomC
             </div>
             New public room
           </DialogTitle>
+          <DialogDescription className="sr-only">Create a new public chat room</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">

@@ -44,7 +44,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending = 
 
   if (isGuest) {
     return (
-      <div className="px-4 py-3 border-t border-border bg-card/80 backdrop-blur-sm">
+      <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-border bg-card/80 backdrop-blur-sm pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
         <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-muted/60 border border-border/50">
           <Lock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
           <p className="text-sm text-muted-foreground flex-1">
@@ -59,16 +59,17 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending = 
   }
 
   return (
-    <div className="px-4 py-3 border-t border-border bg-card/80 backdrop-blur-sm">
+    <div className="px-3 sm:px-4 py-2.5 sm:py-3 border-t border-border bg-card/80 backdrop-blur-sm pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
       <div className="flex items-end gap-2 bg-background rounded-xl border border-border/80 px-3 py-2 focus-within:border-[hsl(var(--accent-primary)/0.6)] focus-within:ring-1 focus-within:ring-[hsl(var(--accent-primary)/0.2)] transition-all">
         <textarea
           ref={inputRef}
           rows={1}
-          placeholder="Type a message… (Enter to send)"
+          placeholder="Type a message…"
           value={message}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           className="flex-1 bg-transparent text-sm resize-none outline-none placeholder:text-muted-foreground py-1.5 max-h-[120px] leading-relaxed"
+          style={{ fontSize: '16px' }}
         />
         <Button
           onClick={handleSend}
@@ -84,7 +85,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending = 
           <span className="sr-only">Send</span>
         </Button>
       </div>
-      <p className="text-[10px] text-muted-foreground mt-1.5 px-1">Shift+Enter for new line</p>
+      <p className="hidden sm:block text-[10px] text-muted-foreground mt-1.5 px-1">Shift+Enter for new line</p>
     </div>
   );
 };

@@ -14,9 +14,9 @@ const RegisterPage: React.FC = () => {
   }, [session, navigate]);
 
   return (
-    <div className="min-h-screen bg-background flex">
-      {/* Left panel — branding */}
-      <div className="hidden lg:flex lg:w-1/2 bg-[hsl(var(--accent-primary))] flex-col items-center justify-center p-12 text-white">
+    <div className="min-h-[100dvh] bg-background flex flex-col lg:flex-row">
+      {/* Left panel — branding (hidden on mobile) */}
+      <div className="hidden lg:flex lg:w-5/12 xl:w-1/2 bg-[hsl(var(--accent-primary))] flex-col items-center justify-center p-12 text-white">
         <div className="max-w-sm">
           <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mb-6">
             <MessageCircle className="w-8 h-8 text-white" />
@@ -43,18 +43,18 @@ const RegisterPage: React.FC = () => {
       </div>
 
       {/* Right panel — form */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+      <div className="flex-1 flex flex-col items-center justify-center px-5 py-10 sm:px-8">
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="flex items-center gap-2 mb-8 lg:hidden">
-            <div className="w-8 h-8 rounded-lg bg-[hsl(var(--accent-primary))] flex items-center justify-center">
-              <MessageCircle className="w-4 h-4 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-[hsl(var(--accent-primary))] flex items-center justify-center">
+              <MessageCircle className="w-5 h-5 text-white" />
             </div>
-            <span className="font-bold text-lg">Prochat</span>
+            <span className="font-bold text-xl">Prochat</span>
           </div>
 
           <h2 className="text-2xl font-bold mb-1">Create account</h2>
-          <p className="text-muted-foreground text-sm mb-8">Free forever. No credit card required.</p>
+          <p className="text-muted-foreground text-sm mb-7">Free forever. No credit card required.</p>
 
           <Auth
             supabaseClient={supabase}

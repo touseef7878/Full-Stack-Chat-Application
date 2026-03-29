@@ -124,8 +124,8 @@ const ChatPage: React.FC = memo(() => {
           onBackToSidebar={handleBackToSidebar}
         >
           <div className="flex h-full flex-col">
-            {/* Chat header */}
-            <div className="flex items-center h-14 border-b border-border px-4 bg-card/80 backdrop-blur-sm flex-shrink-0">
+            {/* Chat header — desktop only (mobile back btn is in ChatLayout) */}
+            <div className="hidden md:flex items-center h-14 border-b border-border px-4 bg-card/80 backdrop-blur-sm flex-shrink-0">
               {selectedChatName ? (
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
@@ -148,6 +148,30 @@ const ChatPage: React.FC = memo(() => {
               ) : (
                 <p className="text-sm text-muted-foreground">Select a conversation</p>
               )}
+            </div>
+
+            {/* Mobile chat header info (back btn already in ChatLayout) */}
+            <div className="flex md:hidden items-center h-14 border-b border-border px-4 bg-card/80 backdrop-blur-sm flex-shrink-0">
+              {selectedChatName ? (
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="relative flex-shrink-0">
+                    <div className="h-8 w-8 rounded-full overflow-hidden ring-2 ring-border/50">
+                      <img
+                        src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${selectedChatName}`}
+                        alt={selectedChatName}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full ring-2 ring-background" />
+                  </div>
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-semibold leading-none truncate">{selectedChatName}</h2>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">
+                      {selectedChatType === 'public' ? 'Public room' : 'Direct message'}
+                    </p>
+                  </div>
+                </div>
+              ) : null}
             </div>
 
             {selectedChatId && selectedChatType ? (

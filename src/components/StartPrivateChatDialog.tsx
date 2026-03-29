@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { PenSquare, Search, ShieldOff } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
@@ -156,6 +156,7 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
             </div>
             New direct message
           </DialogTitle>
+          <DialogDescription className="sr-only">Search for a user by username to start a private chat</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 pt-2">
           <div className="relative">

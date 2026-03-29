@@ -51,24 +51,24 @@ const Index: React.FC = () => {
           Real-time messaging, zero delay
         </div>
 
-        <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 max-w-3xl leading-[1.05]">
+        <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight mb-6 max-w-3xl leading-[1.05]">
           Chat that feels{' '}
           <span className="text-[hsl(var(--accent-primary))]">instant.</span>
         </h1>
 
-        <p className="text-lg md:text-xl text-muted-foreground max-w-xl mb-10 leading-relaxed">
+        <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-xl mb-8 leading-relaxed px-2">
           Public rooms, private messages, real-time updates. Built for speed and simplicity.
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3 mb-6">
-          <Link to="/register">
-            <button className="flex items-center gap-2 px-6 py-3 rounded-xl bg-[hsl(var(--accent-primary))] text-white font-semibold hover:opacity-90 transition-all hover:scale-[1.02] shadow-lg shadow-[hsl(var(--accent-primary)/0.25)]">
+        <div className="flex flex-col sm:flex-row items-center gap-3 mb-5 w-full sm:w-auto px-4 sm:px-0">
+          <Link to="/register" className="w-full sm:w-auto">
+            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-[hsl(var(--accent-primary))] text-white font-semibold hover:opacity-90 transition-all shadow-lg shadow-[hsl(var(--accent-primary)/0.25)] text-sm">
               Create free account
               <ArrowRight className="w-4 h-4" />
             </button>
           </Link>
-          <Link to="/login">
-            <button className="flex items-center gap-2 px-6 py-3 rounded-xl border border-border font-semibold hover:bg-accent/50 transition-all">
+          <Link to="/login" className="w-full sm:w-auto">
+            <button className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl border border-border font-semibold hover:bg-accent/50 transition-all text-sm">
               Sign in
             </button>
           </Link>
@@ -83,7 +83,7 @@ const Index: React.FC = () => {
         </button>
 
         {/* Feature cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-20 max-w-3xl w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-16 max-w-3xl w-full px-2 sm:px-0">
           {[
             { icon: Zap, title: 'Instant delivery', desc: 'Messages appear in real-time via Supabase Realtime' },
             { icon: Shield, title: 'Private chats', desc: 'One-on-one conversations with row-level security' },
