@@ -14,7 +14,7 @@ import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProv
 
 const App = () => (
   <BrowserRouter>
-    <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <SessionContextProvider>
         <Routes>
           <Route path="/" element={<Index />} />
