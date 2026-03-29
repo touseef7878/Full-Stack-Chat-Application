@@ -10,7 +10,7 @@ import CreateChatRoomDialog from './CreateChatRoomDialog';
 import StartPrivateChatDialog from './StartPrivateChatDialog';
 import ProfileSettingsDialog from './ProfileSettingsDialog';
 import MessageRequestsDialog from './MessageRequestsDialog';
-import { Users, Lock } from 'lucide-react';
+import { Users, Lock, Search, X } from 'lucide-react';
 
 interface ChatRoom {
   id: string;
@@ -48,6 +48,7 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
   const [initialLoading, setInitialLoading] = useState(true);
   const currentUserId = session?.user?.id;
   const hasFetchedRef = useRef(false);
+  const [sidebarSearch, setSidebarSearch] = useState('');
 
   const fetchUnreadCounts = useCallback(async (
     rooms: ChatRoom[],
@@ -291,18 +292,49 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
 
       <ScrollArea className="flex-1">
         <div className="p-2">
-          {chatRooms.length === 0 && privateChats.length === 0 ? (
-            <p className="text-center text-muted-foreground p-6 text-sm">
-              No chats yet. Create a public room or start a private chat!
-            </p>
-          ) : (
-            <>
-              {chatRooms.length > 0 && (
+          {/* Sidebar search bar */}
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <input
+              value={sidebarSearch}
+              onChange={(e) => setSidebarSearch(e.target.value)}
+              placeholder="Search chats…"
+              className="w-full pl-8 pr-7 py-2 text-xs rounded-lg bg-muted/60 border border-border/50 outline-none focus:border-[hsl(var(--accent-primary)/0.5)] focus:ring-1 focus:ring-[hsl(var(--accent-primary)/0.2)] transition-all placeholder:text-muted-foreground"
+            />
+            {sidebarSearch && (
+              <button
+                onClick={() => setSidebarSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {(() => {
+            const q = sidebarSearch.toLowerCase();
+            const filteredRooms = q ? chatRooms.filter(r => r.name.toLowerCase().includes(q)) : chatRooms;
+            const filteredPrivates = q ? privateChats.filter(c => {
+              const name = c.other_user_profile.first_name || c.other_user_profile.username || '';
+              return name.toLowerCase().includes(q);
+            }) : privateChats;
+
+            if (filteredRooms.length === 0 && filteredPrivates.length === 0) {
+              return (
+                <p className="text-center text-muted-foreground p-6 text-sm">
+                  {sidebarSearch ? 'No chats match your search.' : 'No chats yet. Create a public room or start a private chat!'}
+                </p>
+              );
+            }
+
+            return (
+              <>
+                {filteredRooms.length > 0 && (
                 <div className="mb-2">
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 py-2">
                     Public Rooms
                   </h3>
-                  {chatRooms.map((chat) => {
+                  {filteredRooms.map((chat) => {
                     const isSelected = selectedChatId === chat.id && selectedChatType === 'public';
                     const hasUnread = (chat.unread_count ?? 0) > 0;
                     return (
@@ -347,12 +379,12 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
                 </div>
               )}
 
-              {privateChats.length > 0 && (
+              {filteredPrivates.length > 0 && (
                 <div>
                   <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground px-3 py-2">
                     Direct Messages
                   </h3>
-                  {privateChats.map((chat) => {
+                  {filteredPrivates.map((chat) => {
                     const isSelected = selectedChatId === chat.id && selectedChatType === 'private';
                     const hasUnread = (chat.unread_count ?? 0) > 0;
                     const displayName =
@@ -415,7 +447,8 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
                 </div>
               )}
             </>
-          )}
+          );
+          })()}
         </div>
       </ScrollArea>
     </div>

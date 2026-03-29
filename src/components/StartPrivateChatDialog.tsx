@@ -43,34 +43,27 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
   useEffect(() => {
     const search = async () => {
       if (!searchTerm.trim()) { setSearchResults([]); return; }
+
+      // Only search if input starts with @ or treat the whole input as a username query
+      const raw = searchTerm.trim().replace(/^@/, ''); // strip leading @
+      if (!raw) { setSearchResults([]); return; }
+
       setLoading(true);
-      const q = `%${searchTerm.trim().toLowerCase()}%`;
+      const q = `%${raw.toLowerCase()}%`;
 
-      const [nameRes, usernameRes] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('id, username, first_name, last_name, avatar_url, dm_privacy')
-          .or(`first_name.ilike.${q},last_name.ilike.${q}`)
-          .neq('id', currentUserId)
-          .limit(20),
-        supabase
-          .from('profiles')
-          .select('id, username, first_name, last_name, avatar_url, dm_privacy')
-          .ilike('username', q)
-          .neq('id', currentUserId)
-          .limit(20),
-      ]);
+      // Only search by username — never by name or email
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, username, first_name, last_name, avatar_url, dm_privacy')
+        .ilike('username', q)
+        .neq('id', currentUserId)
+        .limit(20);
 
-      const merged = [...(nameRes.data || []), ...(usernameRes.data || [])];
-      const seen = new Set<string>();
-      const filtered = merged.filter(u => {
-        if (seen.has(u.id)) return false;
-        seen.add(u.id);
-        // Hide profiles that only have an email as username and no real name
-        if (isEmail(u.username) && !u.first_name) return false;
-        return true;
-      });
-      setSearchResults(filtered);
+      if (!error && data) {
+        // Filter out profiles whose username is an email (no real username set)
+        const filtered = data.filter(u => !isEmail(u.username));
+        setSearchResults(filtered);
+      }
       setLoading(false);
     };
     const t = setTimeout(search, 300);
@@ -170,7 +163,7 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
             <Input
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search by name or username…"
+              placeholder="@username"
               className="pl-9 rounded-lg"
               autoFocus
             />
@@ -185,8 +178,8 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
             )}
             {!loading && !searchTerm && (
               <div className="flex flex-col items-center justify-center h-20 gap-1 text-muted-foreground">
-                <p className="text-sm">Search by name or @username</p>
-                <p className="text-xs opacity-60">Emails are never shown</p>
+                <p className="text-sm">Type <span className="font-mono font-semibold text-[hsl(var(--accent-primary))]">@username</span> to search</p>
+                <p className="text-xs opacity-60">Only users with a set username appear</p>
               </div>
             )}
             {!loading && searchResults.length > 0 && (
