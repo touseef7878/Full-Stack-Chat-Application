@@ -12,7 +12,7 @@ import { formatDistanceToNow } from 'date-fns';
 const isEmail = (str: string) => /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(str);
 
 interface MessageRequestsDialogProps {
-  onRequestAccepted: () => void;
+  onRequestAccepted: (chatId: string, senderName: string) => void;
 }
 
 const MessageRequestsDialog: React.FC<MessageRequestsDialogProps> = ({ onRequestAccepted }) => {
@@ -57,12 +57,15 @@ const MessageRequestsDialog: React.FC<MessageRequestsDialogProps> = ({ onRequest
     return () => { supabase.removeChannel(channel); };
   }, [currentUserId, supabase, getPendingRequests, open, loadRequests]);
 
-  const handleRespond = async (requestId: string, accept: boolean) => {
-    const ok = await respondToRequest(requestId, accept);
-    if (ok) {
+  const handleRespond = async (requestId: string, accept: boolean, senderName: string) => {
+    const result = await respondToRequest(requestId, accept);
+    if (result.ok) {
       setRequests(prev => prev.filter(r => r.id !== requestId));
       setPendingCount(prev => Math.max(0, prev - 1));
-      if (accept) onRequestAccepted();
+      if (accept && result.chatId) {
+        setOpen(false);
+        onRequestAccepted(result.chatId, senderName);
+      }
     }
   };
 
@@ -121,14 +124,14 @@ const MessageRequestsDialog: React.FC<MessageRequestsDialogProps> = ({ onRequest
                 </div>
                 <div className="flex gap-1.5 flex-shrink-0">
                   <button
-                    onClick={() => handleRespond(req.id, true)}
+                    onClick={() => handleRespond(req.id, true, displayName)}
                     className="w-8 h-8 rounded-lg bg-[hsl(var(--accent-primary)/0.1)] hover:bg-[hsl(var(--accent-primary)/0.2)] flex items-center justify-center transition-colors"
                     title="Accept"
                   >
                     <Check className="w-4 h-4 text-[hsl(var(--accent-primary))]" />
                   </button>
                   <button
-                    onClick={() => handleRespond(req.id, false)}
+                    onClick={() => handleRespond(req.id, false, displayName)}
                     className="w-8 h-8 rounded-lg bg-destructive/10 hover:bg-destructive/20 flex items-center justify-center transition-colors"
                     title="Decline"
                   >

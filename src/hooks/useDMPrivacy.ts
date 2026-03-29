@@ -71,15 +71,55 @@ export const useDMPrivacy = () => {
   }, [currentUserId, supabase]);
 
   const respondToRequest = useCallback(async (requestId: string, accept: boolean) => {
-    if (!currentUserId) return false;
+    if (!currentUserId) return { ok: false, chatId: null as string | null };
+
+    // First get the request so we know the sender_id
+    const { data: req, error: fetchErr } = await supabase
+      .from('message_requests')
+      .select('id, sender_id, receiver_id')
+      .eq('id', requestId)
+      .eq('receiver_id', currentUserId)
+      .single();
+
+    if (fetchErr || !req) { showError('Request not found.'); return { ok: false, chatId: null }; }
+
+    // Update status
     const { error } = await supabase
       .from('message_requests')
       .update({ status: accept ? 'accepted' : 'declined', updated_at: new Date().toISOString() })
-      .eq('id', requestId)
-      .eq('receiver_id', currentUserId);
-    if (error) { showError('Failed to respond to request.'); return false; }
-    showSuccess(accept ? 'Request accepted.' : 'Request declined.');
-    return true;
+      .eq('id', requestId);
+
+    if (error) { showError('Failed to respond to request.'); return { ok: false, chatId: null }; }
+
+    if (!accept) {
+      showSuccess('Request declined.');
+      return { ok: true, chatId: null };
+    }
+
+    // On accept — create the private_chats row so both users see it in sidebar
+    const { data: existing } = await supabase
+      .from('private_chats')
+      .select('id')
+      .or(`and(user1_id.eq.${req.sender_id},user2_id.eq.${currentUserId}),and(user1_id.eq.${currentUserId},user2_id.eq.${req.sender_id})`)
+      .maybeSingle();
+
+    let chatId: string;
+    if (existing) {
+      chatId = existing.id;
+    } else {
+      const { data: newChat, error: createErr } = await supabase
+        .from('private_chats')
+        .insert({ user1_id: req.sender_id, user2_id: currentUserId })
+        .select('id')
+        .single();
+      if (createErr || !newChat) { showError('Failed to create chat.'); return { ok: false, chatId: null }; }
+      chatId = newChat.id;
+    }
+
+    showSuccess('Request accepted! You can now chat.');
+    // Notify sidebar on both users' sides
+    window.dispatchEvent(new Event('sidebar:refetch'));
+    return { ok: true, chatId };
   }, [currentUserId, supabase]);
 
   const getPendingRequests = useCallback(async () => {

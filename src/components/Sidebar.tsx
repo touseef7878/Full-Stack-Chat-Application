@@ -10,7 +10,7 @@ import CreateChatRoomDialog from './CreateChatRoomDialog';
 import StartPrivateChatDialog from './StartPrivateChatDialog';
 import ProfileSettingsDialog from './ProfileSettingsDialog';
 import MessageRequestsDialog from './MessageRequestsDialog';
-import { Users, MessageSquare, Lock } from 'lucide-react';
+import { Users, Lock } from 'lucide-react';
 
 interface ChatRoom {
   id: string;
@@ -131,8 +131,9 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
         else if (privateConvos) {
           privates = privateConvos
             .map((convo: any) => {
-              const u1 = convo.user1?.[0];
-              const u2 = convo.user2?.[0];
+              // Supabase returns foreign key joins as objects, not arrays
+              const u1 = Array.isArray(convo.user1) ? convo.user1[0] : convo.user1;
+              const u2 = Array.isArray(convo.user2) ? convo.user2[0] : convo.user2;
               if (!u1 || !u2) return null;
               const otherUser = u1.id === currentUserId ? u2 : u1;
               return {
@@ -197,6 +198,14 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
       .channel('sidebar-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_rooms' }, () => fetchChats(true))
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'private_chats' }, () => fetchChats(true))
+      // Also catch when a message request is accepted — guarantees sidebar updates for both users
+      .on('postgres_changes', {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'message_requests',
+      }, (payload: any) => {
+        if (payload.new?.status === 'accepted') fetchChats(true);
+      })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, () => refreshUnreadCounts())
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'private_messages' }, () => refreshUnreadCounts())
       .on('postgres_changes', {
@@ -249,7 +258,7 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
               <StartPrivateChatDialog
                 onChatSelected={(id: string, name: string, type: 'private') => { onSelectChat(id, name, type); fetchChats(true); }}
               />
-              <MessageRequestsDialog onRequestAccepted={() => fetchChats(true)} />
+              <MessageRequestsDialog onRequestAccepted={(chatId, name) => { onSelectChat(chatId, name, 'private'); fetchChats(true); }} />
               <ProfileSettingsDialog onProfileUpdated={() => fetchChats(true)} />
             </div>
           ) : (
@@ -269,7 +278,7 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
             <StartPrivateChatDialog
               onChatSelected={(id: string, name: string, type: 'private') => { onSelectChat(id, name, type); fetchChats(true); }}
             />
-            <MessageRequestsDialog onRequestAccepted={() => fetchChats(true)} />
+            <MessageRequestsDialog onRequestAccepted={(chatId, name) => { onSelectChat(chatId, name, 'private'); fetchChats(true); }} />
             <ProfileSettingsDialog onProfileUpdated={() => fetchChats(true)} />
           </div>
         ) : (
@@ -348,8 +357,10 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
                     const hasUnread = (chat.unread_count ?? 0) > 0;
                     const displayName =
                       chat.other_user_profile.first_name ||
-                      chat.other_user_profile.username ||
-                      `User ${chat.other_user_profile.id.slice(0, 8)}`;
+                      (chat.other_user_profile.username && !chat.other_user_profile.username.includes('@')
+                        ? chat.other_user_profile.username
+                        : null) ||
+                      `User ${chat.other_user_profile.id.slice(0, 6)}`;
                     return (
                       <div
                         key={`private-${chat.id}`}
@@ -366,14 +377,18 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
                             <AvatarImage
                               src={
                                 chat.other_user_profile.avatar_url ||
-                                `https://api.dicebear.com/7.x/lorelei/svg?seed=${chat.other_user_profile.username}`
+                                `https://api.dicebear.com/7.x/lorelei/svg?seed=${chat.other_user_profile.id}`
                               }
                               alt={displayName}
                             />
-                            <AvatarFallback className="bg-accent/20">
-                              <MessageSquare className="h-5 w-5" />
+                            <AvatarFallback className="bg-[hsl(var(--accent-primary)/0.15)] text-[hsl(var(--accent-primary))] font-semibold text-sm">
+                              {displayName.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
+                          {/* Lock badge — marks this as a private DM, not a group */}
+                          <span className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-[hsl(var(--accent-primary))] flex items-center justify-center ring-2 ring-sidebar-background">
+                            <Lock className="w-2.5 h-2.5 text-white" />
+                          </span>
                           {hasUnread && (
                             <span className="absolute -top-1 -right-1 bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] flex items-center justify-center leading-none shadow-md">
                               {chat.unread_count! > 99 ? '99+' : chat.unread_count}
@@ -381,10 +396,15 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className={cn('truncate', hasUnread ? 'font-semibold' : 'font-medium')}>
-                            {displayName}
-                          </p>
-                          <p className="text-xs text-muted-foreground truncate">Direct message</p>
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <p className={cn('truncate', hasUnread ? 'font-semibold' : 'font-medium')}>
+                              {displayName}
+                            </p>
+                            <span className="flex-shrink-0 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-[hsl(var(--accent-primary)/0.12)] text-[hsl(var(--accent-primary))] border border-[hsl(var(--accent-primary)/0.25)]">
+                              DM
+                            </span>
+                          </div>
+                          <p className="text-xs text-muted-foreground truncate">Private chat</p>
                         </div>
                         {hasUnread && (
                           <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
