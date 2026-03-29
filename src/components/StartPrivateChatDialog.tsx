@@ -4,11 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { PenSquare, Search } from 'lucide-react';
+import { PenSquare, Search, ShieldOff } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import { showError, showSuccess } from '@/utils/toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { useDMPrivacy } from '@/hooks/useDMPrivacy';
 
 interface Profile {
   id: string;
@@ -16,6 +17,7 @@ interface Profile {
   first_name?: string;
   last_name?: string;
   avatar_url?: string;
+  dm_privacy?: string;
 }
 
 interface StartPrivateChatDialogProps {
@@ -29,8 +31,9 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(false);
-  const [starting, setStarting] = useState(false);
+  const [starting, setStarting] = useState<string | null>(null);
   const { supabase, session } = useSession();
+  const { sendMessageRequest, isBlocked } = useDMPrivacy();
   const currentUserId = session?.user?.id;
 
   useEffect(() => {
@@ -42,13 +45,32 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
       if (!searchTerm.trim()) { setSearchResults([]); return; }
       setLoading(true);
       const q = `%${searchTerm.trim().toLowerCase()}%`;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, username, first_name, last_name, avatar_url')
-        .or(`username.ilike.${q},first_name.ilike.${q},last_name.ilike.${q}`)
-        .neq('id', currentUserId)
-        .limit(20);
-      if (!error) setSearchResults(data || []);
+
+      const [nameRes, usernameRes] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, username, first_name, last_name, avatar_url, dm_privacy')
+          .or(`first_name.ilike.${q},last_name.ilike.${q}`)
+          .neq('id', currentUserId)
+          .limit(20),
+        supabase
+          .from('profiles')
+          .select('id, username, first_name, last_name, avatar_url, dm_privacy')
+          .ilike('username', q)
+          .neq('id', currentUserId)
+          .limit(20),
+      ]);
+
+      const merged = [...(nameRes.data || []), ...(usernameRes.data || [])];
+      const seen = new Set<string>();
+      const filtered = merged.filter(u => {
+        if (seen.has(u.id)) return false;
+        seen.add(u.id);
+        // Hide profiles that only have an email as username and no real name
+        if (isEmail(u.username) && !u.first_name) return false;
+        return true;
+      });
+      setSearchResults(filtered);
       setLoading(false);
     };
     const t = setTimeout(search, 300);
@@ -57,37 +79,72 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
 
   const handleSelectUser = async (user: Profile) => {
     if (!currentUserId) return;
-    setStarting(true);
-    const { data: existing, error: checkErr } = await supabase
-      .from('private_chats')
-      .select('id')
-      .or(`and(user1_id.eq.${currentUserId},user2_id.eq.${user.id}),and(user1_id.eq.${user.id},user2_id.eq.${currentUserId})`)
-      .single();
+    setStarting(user.id);
 
-    if (checkErr && checkErr.code !== 'PGRST116') {
-      showError("Error: " + checkErr.message);
-      setStarting(false);
+    // Check if blocked by target
+    const blocked = await isBlocked(user.id);
+    if (blocked) {
+      showError("You can't message this user.");
+      setStarting(null);
       return;
     }
 
-    let chatId: string;
+    // Check DM privacy
+    if (user.dm_privacy === 'nobody') {
+      showError("This user is not accepting messages.");
+      setStarting(null);
+      return;
+    }
+
+    // Check existing chat
+    const { data: existing } = await supabase
+      .from('private_chats')
+      .select('id')
+      .or(`and(user1_id.eq.${currentUserId},user2_id.eq.${user.id}),and(user1_id.eq.${user.id},user2_id.eq.${currentUserId})`)
+      .maybeSingle();
+
+    const displayName = user.first_name
+      ? `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`
+      : isEmail(user.username) ? `User ${user.id.slice(0, 6)}` : user.username;
+
     if (existing) {
-      chatId = existing.id;
-    } else {
-      const { data: newChat, error: createErr } = await supabase
+      onChatSelected(existing.id, displayName, 'private');
+      setOpen(false);
+      setStarting(null);
+      return;
+    }
+
+    // Check accepted request
+    const { data: acceptedReq } = await supabase
+      .from('message_requests')
+      .select('id')
+      .or(`and(sender_id.eq.${currentUserId},receiver_id.eq.${user.id}),and(sender_id.eq.${user.id},receiver_id.eq.${currentUserId})`)
+      .eq('status', 'accepted')
+      .maybeSingle();
+
+    if (acceptedReq) {
+      const { data: newChat, error } = await supabase
         .from('private_chats')
         .insert({ user1_id: currentUserId, user2_id: user.id })
         .select('id')
         .single();
-      if (createErr) { showError("Failed to start chat: " + createErr.message); setStarting(false); return; }
-      chatId = newChat.id;
-      showSuccess(`Chat started with ${user.first_name || user.username}`);
+      if (error) { showError("Failed to start chat."); setStarting(null); return; }
+      onChatSelected(newChat.id, displayName, 'private');
+      setOpen(false);
+      setStarting(null);
+      return;
     }
 
-    const displayName = user.first_name || (isEmail(user.username) ? `User ${user.id.slice(0, 6)}` : user.username);
-    onChatSelected(chatId, displayName, 'private');
+    // Send message request
+    const result = await sendMessageRequest(user.id);
+    if (result.status === 'pending') {
+      showSuccess('Message request sent! They need to accept before you can chat.');
+    } else if (result.status === 'declined') {
+      showError('Your previous request was declined.');
+    }
+
     setOpen(false);
-    setStarting(false);
+    setStarting(null);
   };
 
   return (
@@ -127,7 +184,10 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
               <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">No users found</div>
             )}
             {!loading && !searchTerm && (
-              <div className="flex items-center justify-center h-20 text-sm text-muted-foreground">Type a name to search</div>
+              <div className="flex flex-col items-center justify-center h-20 gap-1 text-muted-foreground">
+                <p className="text-sm">Search by name or @username</p>
+                <p className="text-xs opacity-60">Emails are never shown</p>
+              </div>
             )}
             {!loading && searchResults.length > 0 && (
               <div className="space-y-1 max-h-[200px] overflow-y-auto">
@@ -136,24 +196,31 @@ const StartPrivateChatDialog: React.FC<StartPrivateChatDialogProps> = ({ onChatS
                     ? `${user.first_name}${user.last_name ? ' ' + user.last_name : ''}`
                     : isEmail(user.username) ? `User ${user.id.slice(0, 6)}` : user.username;
                   const handle = !isEmail(user.username) ? user.username : null;
+                  const dmsClosed = user.dm_privacy === 'nobody';
+                  const isStarting = starting === user.id;
                   return (
                     <button
                       key={user.id}
-                      onClick={() => handleSelectUser(user)}
-                      disabled={starting}
+                      onClick={() => !dmsClosed && handleSelectUser(user)}
+                      disabled={isStarting || dmsClosed}
                       className={cn(
-                        "w-full flex items-center gap-3 p-2.5 rounded-lg text-left hover:bg-accent/60 transition-colors",
-                        starting && "opacity-50 pointer-events-none"
+                        "w-full flex items-center gap-3 p-2.5 rounded-lg text-left transition-colors",
+                        dmsClosed ? "opacity-50 cursor-not-allowed" : "hover:bg-accent/60",
+                        isStarting && "opacity-50 pointer-events-none"
                       )}
                     >
                       <Avatar className="h-9 w-9 flex-shrink-0">
                         <AvatarImage src={user.avatar_url || `https://api.dicebear.com/7.x/lorelei/svg?seed=${user.id}`} />
                         <AvatarFallback className="text-xs bg-accent/20">{displayName.charAt(0).toUpperCase()}</AvatarFallback>
                       </Avatar>
-                      <div className="min-w-0">
+                      <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{displayName}</p>
                         {handle && <p className="text-xs text-muted-foreground truncate">@{handle}</p>}
                       </div>
+                      {dmsClosed && <ShieldOff className="w-4 h-4 text-muted-foreground flex-shrink-0" />}
+                      {isStarting && (
+                        <span className="w-4 h-4 border-2 border-[hsl(var(--accent-primary))] border-t-transparent rounded-full animate-spin flex-shrink-0" />
+                      )}
                     </button>
                   );
                 })}

@@ -9,6 +9,7 @@ import { showError } from '@/utils/toast';
 import CreateChatRoomDialog from './CreateChatRoomDialog';
 import StartPrivateChatDialog from './StartPrivateChatDialog';
 import ProfileSettingsDialog from './ProfileSettingsDialog';
+import MessageRequestsDialog from './MessageRequestsDialog';
 import { Users, MessageSquare, Lock } from 'lucide-react';
 
 interface ChatRoom {
@@ -246,14 +247,14 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
             <div className="flex items-center space-x-2">
               <CreateChatRoomDialog onChatRoomCreated={() => fetchChats(true)} />
               <StartPrivateChatDialog
-                onChatSelected={(id, name, type) => { onSelectChat(id, name, type); fetchChats(true); }}
+                onChatSelected={(id: string, name: string, type: 'private') => { onSelectChat(id, name, type); fetchChats(true); }}
               />
+              <MessageRequestsDialog onRequestAccepted={() => fetchChats(true)} />
               <ProfileSettingsDialog onProfileUpdated={() => fetchChats(true)} />
             </div>
           ) : (
             <div className="flex items-center space-x-2 text-muted-foreground">
-              <Lock className="h-4 w-4" />
-              <span className="text-sm">Guest Mode</span>
+              <Lock className="h-4 w-4" /><span className="text-sm">Guest Mode</span>
             </div>
           )}
         </div>
@@ -266,8 +267,9 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
           <div className="flex items-center space-x-2">
             <CreateChatRoomDialog onChatRoomCreated={() => fetchChats(true)} />
             <StartPrivateChatDialog
-              onChatSelected={(id, name, type) => { onSelectChat(id, name, type); fetchChats(true); }}
+              onChatSelected={(id: string, name: string, type: 'private') => { onSelectChat(id, name, type); fetchChats(true); }}
             />
+            <MessageRequestsDialog onRequestAccepted={() => fetchChats(true)} />
             <ProfileSettingsDialog onProfileUpdated={() => fetchChats(true)} />
           </div>
         ) : (

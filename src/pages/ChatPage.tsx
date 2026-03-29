@@ -21,7 +21,7 @@ const ChatPage: React.FC = memo(() => {
   // Use a stable reference for the key to prevent unnecessary re-renders
   const chatKey = selectedChatId ? `${selectedChatId}-${selectedChatType}` : 'no-chat';
 
-  const { messages, loadingMessages, sendMessage, isSending } = useChatMessages(selectedChatId, selectedChatType);
+  const { messages, loadingMessages, sendMessage, isSending, deleteMessageLocally } = useChatMessages(selectedChatId, selectedChatType);
 
   const markChatAsRead = useCallback(async (chatId: string, chatType: 'public' | 'private') => {
     if (!currentUserId || isGuest) return;
@@ -160,7 +160,13 @@ const ChatPage: React.FC = memo(() => {
                     </div>
                   </div>
                 ) : (
-                  <MessageList key={chatKey} messages={messages} currentUserId={currentUserId} />
+                  <MessageList
+                    key={chatKey}
+                    messages={messages}
+                    currentUserId={currentUserId}
+                    chatType={selectedChatType}
+                    onMessageDeleted={deleteMessageLocally}
+                  />
                 )}
                 <MessageInput onSendMessage={handleSendMessage} isSending={isSending} />
               </>

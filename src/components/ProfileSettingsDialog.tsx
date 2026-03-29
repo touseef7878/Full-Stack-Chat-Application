@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Settings, User, LogOut, Sun, Moon, Camera, Upload } from 'lucide-react';
+import { Settings, User, LogOut, Sun, Moon, Camera, Upload, ShieldCheck } from 'lucide-react';
 import { useSession } from '@/components/SessionContextProvider';
 import { showError, showSuccess } from '@/utils/toast';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +15,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { useNavigate } from 'react-router-dom';
 import { Switch } from "@/components/ui/switch";
 import { useTheme } from "next-themes";
+import { useDMPrivacy, type DmPrivacy } from '@/hooks/useDMPrivacy';
 
 interface ProfileSettingsDialogProps {
   onProfileUpdated: () => void;
@@ -29,11 +30,13 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
   const [loading, setLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [dmPrivacy, setDmPrivacy] = useState<DmPrivacy>('everyone');
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const { supabase, session } = useSession();
   const currentUserId = session?.user?.id;
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
+  const { updateDmPrivacy, getDmPrivacy } = useDMPrivacy();
 
   const fetchProfile = useCallback(async () => {
     if (!currentUserId) return;
@@ -49,6 +52,9 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
       setUsername(p.username || '');
       setAvatarUrl(p.avatar_url || '');
     }
+    // Load DM privacy setting
+    const privacy = await getDmPrivacy();
+    setDmPrivacy(privacy);
     setLoading(false);
   }, [currentUserId, supabase]);
 
@@ -242,7 +248,33 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
 
               <Separator />
 
-              {/* Chat data */}
+              {/* Privacy */}
+              <div className="space-y-3">
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Privacy</p>
+                <div className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-card">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
+                      <ShieldCheck className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium">Who can message me</p>
+                      <p className="text-xs text-muted-foreground">
+                        {dmPrivacy === 'everyone' ? 'Anyone can send you a request' : 'Nobody can message you'}
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    checked={dmPrivacy === 'nobody'}
+                    onCheckedChange={async (c) => {
+                      const val: DmPrivacy = c ? 'nobody' : 'everyone';
+                      setDmPrivacy(val);
+                      await updateDmPrivacy(val);
+                    }}
+                  />
+                </div>
+              </div>
+
+              <Separator />
               <div className="space-y-3">
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Data</p>
                 <ChatDataManagementSection onChatDataCleared={onProfileUpdated} />

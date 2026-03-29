@@ -9,6 +9,7 @@ interface Message {
   sender_id: string;
   content: string;
   created_at: string;
+  deleted_at?: string | null;
   chat_room_id?: string;
   private_chat_id?: string;
   profile?: {
@@ -184,6 +185,23 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
         },
         handleNewMessage
       )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'private_messages',
+          filter: `private_chat_id=eq.${chatId}`,
+        },
+        (payload: { new: any }) => {
+          // Handle soft-delete updates
+          setMessages(prev => prev.map(m =>
+            m.id === payload.new.id
+              ? { ...m, deleted_at: payload.new.deleted_at, content: payload.new.content }
+              : m
+          ));
+        }
+      )
       .subscribe();
 
     return () => {
@@ -191,5 +209,11 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
     };
   }, [chatId, chatType, fetchMessages, supabase, currentUserId]);
 
-  return { messages, loadingMessages, sendMessage, isSending };
+  const deleteMessageLocally = useCallback((messageId: string) => {
+    setMessages(prev => prev.map(m =>
+      m.id === messageId ? { ...m, deleted_at: new Date().toISOString(), content: '' } : m
+    ));
+  }, []);
+
+  return { messages, loadingMessages, sendMessage, isSending, deleteMessageLocally };
 };
