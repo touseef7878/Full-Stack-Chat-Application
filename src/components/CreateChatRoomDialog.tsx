@@ -41,7 +41,7 @@ const CreateChatRoomDialog: React.FC<CreateChatRoomDialogProps> = ({ onChatRoomC
           <span className="sr-only">Create room</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[hsl(var(--accent-primary)/0.1)] flex items-center justify-center">
@@ -60,18 +60,18 @@ const CreateChatRoomDialog: React.FC<CreateChatRoomDialogProps> = ({ onChatRoomC
               onChange={(e) => setChatRoomName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
               placeholder="e.g. general, random, dev-talk"
-              className="rounded-lg"
+              className="rounded-xl h-11"
               autoFocus
             />
           </div>
-          <div className="flex gap-2 justify-end">
-            <Button variant="outline" onClick={() => setOpen(false)} className="rounded-lg">Cancel</Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setOpen(false)} className="flex-1 rounded-xl h-11">Cancel</Button>
             <Button
               onClick={handleCreate}
               disabled={!chatRoomName.trim() || loading}
-              className="rounded-lg bg-[hsl(var(--accent-primary))] hover:bg-[hsl(var(--accent-primary)/0.85)] text-white"
+              className="flex-1 rounded-xl h-11 bg-[hsl(var(--accent-primary))] hover:bg-[hsl(var(--accent-primary)/0.85)] text-white"
             >
-              {loading ? 'Creating…' : 'Create room'}
+              {loading ? 'Creating…' : 'Create'}
             </Button>
           </div>
         </div>

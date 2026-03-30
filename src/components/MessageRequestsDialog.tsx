@@ -80,7 +80,7 @@ const MessageRequestsDialog: React.FC<MessageRequestsDialogProps> = ({ onRequest
           <span className="sr-only">Message requests</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-sm">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[hsl(var(--accent-primary)/0.1)] flex items-center justify-center">

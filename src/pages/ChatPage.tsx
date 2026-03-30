@@ -5,6 +5,7 @@ import MessageList from '@/components/MessageList';
 import { showError } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { useChatMessages } from '@/hooks/useChatMessages';
+import AndroidBackHandler from '@/components/AndroidBackHandler';
 
 // Dynamically import Sidebar to reduce initial bundle size
 const Sidebar = React.lazy(() => import('@/components/Sidebar'));
@@ -110,7 +111,11 @@ const ChatPage: React.FC = memo(() => {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-background text-foreground">
+    <div className="h-[100dvh] flex flex-col bg-background text-foreground">
+      <AndroidBackHandler
+        isChatOpen={!!(selectedChatId && selectedChatType)}
+        onBackFromChat={handleBackToSidebar}
+      />
       <React.Suspense fallback={<div className="h-screen flex items-center justify-center bg-background">Loading chat...</div>}>
         <ChatLayout
           sidebar={

@@ -2,39 +2,40 @@ import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 /**
- * Intercepts Android hardware back button (popstate event in WebView)
- * and routes it through React Router instead of letting the WebView
- * navigate away from the app (which causes white screen flash).
+ * Intercepts Android hardware back button (popstate).
+ * - If a chat is open: calls onBackFromChat (goes back to sidebar)
+ * - If on a non-root page (login/register): navigates back in router
+ * - If on root with no chat open: re-pushes sentinel (OS handles minimize)
  */
-export const useAndroidBack = () => {
+export const useAndroidBack = (onBackFromChat?: () => void, isChatOpen?: boolean) => {
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
-    // Push a sentinel state so there's always something to pop back to
-    // without leaving the app
-    window.history.pushState({ androidBack: true }, '');
+    // Always keep a sentinel entry so back never leaves the app
+    window.history.pushState({ sentinel: true }, '');
 
-    const handlePopState = (_e: PopStateEvent) => {
-      // Re-push the sentinel so the back button always has a target
-      window.history.pushState({ androidBack: true }, '');
+    const handlePopState = () => {
+      // Immediately re-push so we always have a buffer entry
+      window.history.pushState({ sentinel: true }, '');
 
-      // Define which routes are "root" — pressing back here should minimize the app
-      // not navigate further back (which would cause white screen)
       const rootRoutes = ['/', '/chat', '/chat/guest'];
       const isRoot = rootRoutes.includes(location.pathname);
 
       if (isRoot) {
-        // On root routes, do nothing — let the OS handle minimize
-        // We already re-pushed state so no white flash
+        if (isChatOpen && onBackFromChat) {
+          // Chat is open → go back to sidebar
+          onBackFromChat();
+        }
+        // else: on root with no chat → do nothing, OS minimizes app
         return;
       }
 
-      // On non-root routes, navigate back within the app
+      // Non-root page (login, register, etc.) → go back in router
       navigate(-1);
     };
 
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
-  }, [navigate, location.pathname]);
+  }, [navigate, location.pathname, isChatOpen, onBackFromChat]);
 };

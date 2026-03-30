@@ -31,47 +31,29 @@ const ChatDataManagementSection: React.FC<ChatDataManagementSectionProps> = ({ o
     setLoadingMarkRead(true);
     try {
       const now = new Date().toISOString();
-
-      // Fetch all public chat rooms
       const { data: rooms } = await supabase.from('chat_rooms').select('id');
-      // Fetch all private chats for this user
       const { data: privates } = await supabase
-        .from('private_chats')
-        .select('id')
+        .from('private_chats').select('id')
         .or(`user1_id.eq.${currentUserId},user2_id.eq.${currentUserId}`);
 
-      // Upsert read status for every public room
-      if (rooms && rooms.length > 0) {
-        const publicUpserts = rooms.map((r: any) => ({
-          user_id: currentUserId,
-          chat_room_id: r.id,
-          private_chat_id: null,
-          last_read_at: now,
-        }));
-        const { error } = await supabase
-          .from('user_chat_read_status')
-          .upsert(publicUpserts, { onConflict: 'user_id,chat_room_id' });
+      if (rooms?.length) {
+        const { error } = await supabase.from('user_chat_read_status').upsert(
+          rooms.map((r: any) => ({ user_id: currentUserId, chat_room_id: r.id, private_chat_id: null, last_read_at: now })),
+          { onConflict: 'user_id,chat_room_id' }
+        );
         if (error) throw error;
       }
-
-      // Upsert read status for every private chat
-      if (privates && privates.length > 0) {
-        const privateUpserts = privates.map((p: any) => ({
-          user_id: currentUserId,
-          chat_room_id: null,
-          private_chat_id: p.id,
-          last_read_at: now,
-        }));
-        const { error } = await supabase
-          .from('user_chat_read_status')
-          .upsert(privateUpserts, { onConflict: 'user_id,private_chat_id' });
+      if (privates?.length) {
+        const { error } = await supabase.from('user_chat_read_status').upsert(
+          privates.map((p: any) => ({ user_id: currentUserId, chat_room_id: null, private_chat_id: p.id, last_read_at: now })),
+          { onConflict: 'user_id,private_chat_id' }
+        );
         if (error) throw error;
       }
-
       showSuccess('All messages marked as read.');
       onChatDataCleared();
     } catch (err: any) {
-      showError('Failed to mark all read: ' + (err?.message || 'Unknown error'));
+      showError('Failed: ' + (err?.message || 'Unknown error'));
     } finally {
       setLoadingMarkRead(false);
     }
@@ -81,16 +63,12 @@ const ChatDataManagementSection: React.FC<ChatDataManagementSectionProps> = ({ o
     if (!currentUserId) return;
     setLoadingPublic(true);
     try {
-      // Delete ALL public rooms created by this user (cascade deletes messages)
-      const { error } = await supabase
-        .from('chat_rooms')
-        .delete()
-        .eq('creator_id', currentUserId);
+      const { error } = await supabase.from('chat_rooms').delete().eq('creator_id', currentUserId);
       if (error) throw error;
-      showSuccess('All your public rooms deleted.');
+      showSuccess('Public rooms deleted.');
       onChatDataCleared();
     } catch (err: any) {
-      showError('Failed to delete public rooms: ' + (err?.message || 'Unknown error'));
+      showError('Failed: ' + (err?.message || 'Unknown error'));
     } finally {
       setLoadingPublic(false);
     }
@@ -100,16 +78,13 @@ const ChatDataManagementSection: React.FC<ChatDataManagementSectionProps> = ({ o
     if (!currentUserId) return;
     setLoadingPrivate(true);
     try {
-      // Delete all private chats this user is part of (cascade deletes messages)
-      const { error } = await supabase
-        .from('private_chats')
-        .delete()
+      const { error } = await supabase.from('private_chats').delete()
         .or(`user1_id.eq.${currentUserId},user2_id.eq.${currentUserId}`);
       if (error) throw error;
-      showSuccess('All private chats deleted.');
+      showSuccess('Private chats deleted.');
       onChatDataCleared();
     } catch (err: any) {
-      showError('Failed to delete private chats: ' + (err?.message || 'Unknown error'));
+      showError('Failed: ' + (err?.message || 'Unknown error'));
     } finally {
       setLoadingPrivate(false);
     }
@@ -118,21 +93,21 @@ const ChatDataManagementSection: React.FC<ChatDataManagementSectionProps> = ({ o
   const actions = [
     {
       icon: CheckCheck,
-      label: 'Mark all messages as read',
-      desc: 'Clears all unread badges across every room and DM.',
+      label: 'Mark all as read',
+      desc: 'Clear all unread badges',
       confirmTitle: 'Mark all as read?',
-      confirmDesc: 'All unread badges will be cleared. This cannot be undone.',
-      actionLabel: 'Mark all read',
+      confirmDesc: 'All unread badges will be cleared.',
+      actionLabel: 'Mark read',
       loading: loadingMarkRead,
       onConfirm: handleMarkAllRead,
       destructive: false,
     },
     {
       icon: Hash,
-      label: 'Delete all my public rooms',
-      desc: 'Permanently deletes all public rooms you created and their messages.',
+      label: 'Delete my public rooms',
+      desc: 'Remove all rooms you created',
       confirmTitle: 'Delete all your public rooms?',
-      confirmDesc: 'This permanently deletes every public room you created and all messages inside them. This cannot be undone.',
+      confirmDesc: 'Permanently deletes every public room you created and all messages inside. Cannot be undone.',
       actionLabel: 'Delete rooms',
       loading: loadingPublic,
       onConfirm: handleDeletePublicRooms,
@@ -140,10 +115,10 @@ const ChatDataManagementSection: React.FC<ChatDataManagementSectionProps> = ({ o
     },
     {
       icon: MessageSquareOff,
-      label: 'Delete all private chats',
-      desc: 'Permanently deletes all DMs you are part of and their messages.',
+      label: 'Delete private chats',
+      desc: 'Remove all your DM threads',
       confirmTitle: 'Delete all private chats?',
-      confirmDesc: 'This permanently deletes every DM thread you are part of and all messages inside them. The other user will also lose access. This cannot be undone.',
+      confirmDesc: 'Permanently deletes every DM thread and all messages. The other user also loses access. Cannot be undone.',
       actionLabel: 'Delete chats',
       loading: loadingPrivate,
       onConfirm: handleDeletePrivateChats,
@@ -156,27 +131,27 @@ const ChatDataManagementSection: React.FC<ChatDataManagementSectionProps> = ({ o
       {actions.map(({ icon: Icon, label, desc, confirmTitle, confirmDesc, actionLabel, loading, onConfirm, destructive }) => (
         <AlertDialog key={label}>
           <AlertDialogTrigger asChild>
-            <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/60 hover:bg-muted/50 transition-colors text-left group">
+            <button className="w-full flex items-center gap-3 p-3 rounded-xl border border-border/60 hover:bg-muted/50 active:bg-muted/70 transition-colors text-left">
               <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${destructive ? 'bg-destructive/10' : 'bg-muted'}`}>
                 <Icon className={`h-4 w-4 ${destructive ? 'text-destructive' : 'text-foreground'}`} />
               </div>
-              <div className="min-w-0">
-                <p className={`text-sm font-medium ${destructive ? 'text-destructive' : ''}`}>{label}</p>
-                <p className="text-xs text-muted-foreground truncate">{desc}</p>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-medium leading-tight ${destructive ? 'text-destructive' : ''}`}>{label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-tight">{desc}</p>
               </div>
             </button>
           </AlertDialogTrigger>
-          <AlertDialogContent>
+          <AlertDialogContent className="w-[calc(100vw-2rem)] max-w-sm rounded-2xl">
             <AlertDialogHeader>
               <AlertDialogTitle>{confirmTitle}</AlertDialogTitle>
               <AlertDialogDescription>{confirmDesc}</AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel disabled={loading}>Cancel</AlertDialogCancel>
+            <AlertDialogFooter className="flex-row gap-2 sm:flex-row">
+              <AlertDialogCancel disabled={loading} className="flex-1 rounded-xl">Cancel</AlertDialogCancel>
               <AlertDialogAction
                 onClick={onConfirm}
                 disabled={loading}
-                className={destructive ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}
+                className={`flex-1 rounded-xl ${destructive ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90' : ''}`}
               >
                 {loading ? 'Working…' : actionLabel}
               </AlertDialogAction>

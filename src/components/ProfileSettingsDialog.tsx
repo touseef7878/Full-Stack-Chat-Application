@@ -125,16 +125,16 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
           <span className="sr-only">Settings</span>
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-0">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-md rounded-2xl p-0 overflow-hidden">
+        <DialogHeader className="px-5 pt-5 pb-0">
           <DialogTitle className="text-lg font-semibold">Settings</DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center h-48 text-muted-foreground text-sm">Loading…</div>
+          <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">Loading…</div>
         ) : (
-          <ScrollArea className="max-h-[80vh]">
-            <div className="px-6 pb-6 space-y-6 pt-4">
+          <ScrollArea className="max-h-[85dvh]">
+            <div className="px-5 pb-6 space-y-5 pt-4">
 
               {/* Avatar + name preview */}
               <div className="flex items-center gap-4 p-4 rounded-xl bg-muted/40 border border-border/50">
@@ -189,11 +189,11 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label htmlFor="firstName" className="text-xs font-medium">First name</Label>
-                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" className="rounded-lg h-9 text-sm" />
+                    <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" className="rounded-xl h-11 text-sm" />
                   </div>
                   <div className="space-y-1.5">
                     <Label htmlFor="lastName" className="text-xs font-medium">Last name</Label>
-                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" className="rounded-lg h-9 text-sm" />
+                    <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" className="rounded-xl h-11 text-sm" />
                   </div>
                 </div>
                 <div className="space-y-1.5">
@@ -205,18 +205,18 @@ const ProfileSettingsDialog: React.FC<ProfileSettingsDialogProps> = ({ onProfile
                       value={isEmail(username) ? '' : username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="johndoe"
-                      className="rounded-lg h-9 text-sm pl-7"
+                      className="rounded-xl h-11 text-sm pl-7"
                     />
                   </div>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="avatarUrl" className="text-xs font-medium">Avatar URL <span className="text-muted-foreground font-normal">(optional)</span></Label>
-                  <Input id="avatarUrl" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" className="rounded-lg h-9 text-sm" />
+                  <Input id="avatarUrl" value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://…" className="rounded-xl h-11 text-sm" />
                 </div>
                 <Button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="w-full rounded-lg bg-[hsl(var(--accent-primary))] hover:bg-[hsl(var(--accent-primary)/0.85)] text-white h-9"
+                  className="w-full rounded-xl bg-[hsl(var(--accent-primary))] hover:bg-[hsl(var(--accent-primary)/0.85)] text-white h-11"
                 >
                   {isSaving ? 'Saving…' : 'Save profile'}
                 </Button>
