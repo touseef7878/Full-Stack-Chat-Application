@@ -10,10 +10,12 @@ import { Toaster } from "@/components/ui/sonner";
 import SessionContextProvider from "./components/SessionContextProvider";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
-import { ThemeProvider } from "@/components/theme-provider"; // Import ThemeProvider
+import { ThemeProvider } from "@/components/theme-provider";
+import AndroidBackHandler from "./components/AndroidBackHandler";
 
 const App = () => (
   <BrowserRouter>
+    <AndroidBackHandler />
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <SessionContextProvider>
         <Routes>
