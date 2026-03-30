@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, memo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Send, Lock } from "lucide-react";
 import { useSession } from '@/components/SessionContextProvider';
@@ -11,7 +9,7 @@ interface MessageInputProps {
   isSending?: boolean;
 }
 
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending = false }) => {
+const MessageInput: React.FC<MessageInputProps> = memo(({ onSendMessage, isSending = false }) => {
   const { isGuest } = useSession();
   const [message, setMessage] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -88,6 +86,7 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage, isSending = 
       <p className="hidden sm:block text-[10px] text-muted-foreground mt-1.5 px-1">Shift+Enter for new line</p>
     </div>
   );
-};
+});
 
+MessageInput.displayName = 'MessageInput';
 export default MessageInput;

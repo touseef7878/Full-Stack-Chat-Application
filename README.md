@@ -1,135 +1,118 @@
-# Prochat - Real-time Chat Application
+# Prochat
 
-A modern, full-stack chat application built with React, TypeScript, and Vite, featuring real-time messaging, user authentication, and responsive design with shadcn/ui components.
+A real-time chat application built with React, TypeScript, Vite, and Supabase.
 
-## 🚀 Tech Stack
+## Features
 
-### Frontend
-- **React 18** - JavaScript library for building user interfaces
-- **TypeScript** - Type-safe JavaScript superset
-- **Vite** - Fast build tool and development server
-- **Tailwind CSS** - Utility-first CSS framework
-- **shadcn/ui** - Reusable UI components built with Radix UI and Tailwind CSS
-- **React Router DOM** - Client-side routing solution
+### Messaging
+- Public chat rooms — open to all authenticated users and guests (read-only)
+- Direct messages — private one-on-one conversations
+- Real-time message delivery via Supabase Realtime
+- Optimistic UI — messages appear instantly before DB confirmation
+- Message grouping by sender with timestamps
+- Soft-delete your own DM messages (shows "This message was deleted")
 
-### Backend & Database
-- **Supabase** - Backend-as-a-Service (BaaS) providing authentication, database, and real-time features
-- **PostgreSQL** - Relational database used by Supabase
+### Privacy & Security
+- Message request system — users must accept before a DM thread is created
+- Block users — blocked users cannot message you or appear in your DM search
+- DM privacy setting — toggle between "Everyone" and "Nobody" can message you
+- Username-only search — DM search only works with `@username`, emails never exposed
+- Row-level security on all Supabase tables
 
-### UI/UX Libraries
-- **Lucide React** - Beautiful icon library
-- **Radix UI** - Low-level component primitives for accessible UI
-- **React Hook Form** - Form library with easy validation
-- **Zod** - Schema validation library
-- **Recharts** - Charting library
-- **Sonner** - Toast notifications
+### Sidebar
+- Unified sidebar with Public Rooms and Direct Messages sections
+- DMs have a unique lock badge + `DM` pill tag to distinguish from group rooms
+- Unread message badges with real-time count updates
+- Sidebar search bar to filter existing chats
+- Badges clear instantly when a chat is opened
 
-### Development Tools
-- **ESLint** - Code linting
-- **pnpm** - Fast, disk space efficient package manager
-- **Vaul** - Modal and drawer components
-- **React Query** - Server state management
+### Auth
+- Email/password sign up and sign in via Supabase Auth
+- Guest mode — read-only access without an account
+- Profile settings — first name, last name, username, avatar upload
 
-## 📋 Features
+### UI
+- Light/dark mode toggle (persisted to localStorage)
+- Fully responsive — Android phones, tablets, and laptops
+- Smooth slide animation between sidebar and chat on mobile
+- Skeleton loading states, no layout flashes
 
-- **Real-time Chat**: Send and receive messages instantly
-- **User Authentication**: Secure login/signup with Supabase Auth
-- **Profile Management**: User profiles with username and avatar
-- **Multiple Chat Rooms**: Create and participate in different chat rooms
-- **Responsive Design**: Mobile-first approach with responsive layouts
-- **Dark/Light Theme**: Toggle between color schemes
-- **Modern UI Components**: Built with shadcn/ui for consistent design
-- **Form Validation**: Robust form handling with React Hook Form and Zod
+## Tech Stack
 
-## 🏗️ Project Structure
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite |
+| Styling | Tailwind CSS, shadcn/ui |
+| Backend | Supabase (Postgres + Realtime + Auth + Storage) |
+| Email | Resend (via Supabase custom SMTP) |
+| Routing | React Router v6 |
+| State | React Context + hooks (no Redux) |
+
+## Database Schema
 
 ```
-prochat/
-├── public/              # Static assets
-├── src/
-│   ├── components/      # Reusable UI components
-│   ├── lib/            # Utility functions and configuration
-│   ├── hooks/          # Custom React hooks
-│   ├── pages/          # Route components
-│   ├── types/          # TypeScript type definitions
-│   ├── services/       # API and Supabase integration
-│   ├── utils/          # Helper functions
-│   ├── App.tsx         # Main application component
-│   └── main.tsx        # Application entry point
-├── supabase_schema.sql # Database schema and RLS policies
-├── vite.config.ts      # Vite configuration
-├── tailwind.config.ts  # Tailwind CSS configuration
-├── tsconfig.json       # TypeScript configuration
-└── package.json        # Project dependencies and scripts
+profiles          — user profiles (username, name, avatar, dm_privacy)
+chat_rooms        — public group rooms
+messages          — messages in public rooms
+private_chats     — accepted DM threads between two users
+private_messages  — messages in DMs (with soft-delete support)
+user_chat_read_status — tracks last-read timestamp per user per chat
+user_blocks       — block list (blocker_id → blocked_id)
+message_requests  — pending/accepted/declined DM requests
 ```
 
-## 🛠️ Database Schema
+## Setup
 
-The application uses a PostgreSQL database with the following tables:
-
-- **profiles**: User profile information (username, avatar, etc.)
-- **chat_rooms**: Chat room information (name, creator, etc.)
-- **messages**: Message content (content, sender, timestamp, room)
-
-All tables have Row Level Security (RLS) policies for data protection and privacy.
-
-## 📦 Installation & Setup
-
-1. **Clone the repository:**
-```bash
-git clone https://github.com/touseef7878/PRODIGY_FS_04.git
-cd PRODIGY_FS_04
-```
-
-2. **Install dependencies:**
+### 1. Install dependencies
 ```bash
 pnpm install
 ```
 
-3. **Set up environment variables:**
-Create a `.env` file in the root directory with the following:
-```env
-VITE_SUPABASE_URL="your_supabase_project_url"
-VITE_SUPABASE_ANON_KEY="your_supabase_anon_key"
+### 2. Configure environment
+Create `.env` with your Supabase project credentials:
+```
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-4. **Run the development server:**
+### 3. Run database migrations
+In your Supabase SQL editor, run in order:
+1. `supabase/migrations/20260329144307_create_tables.sql` — core schema
+2. `supabase/migrations/20260329150000_add_rpc_functions.sql` — unread count RPCs
+3. `supabase/migrations/20260329160000_dm_privacy.sql` — DM privacy features
+
+### 4. Start dev server
 ```bash
 pnpm dev
 ```
 
-5. **Visit the application:**
-Open [http://localhost:8080](http://localhost:8080) in your browser.
+## Project Structure
 
-## 🧪 Available Scripts
+```
+src/
+├── components/
+│   ├── layout/          # ChatLayout (responsive), AuthLayout
+│   ├── ui/              # shadcn/ui primitives
+│   ├── Sidebar.tsx      # Chat list with search, unread badges
+│   ├── MessageList.tsx  # Message rendering with context menu
+│   ├── MessageInput.tsx # Auto-resize textarea input
+│   ├── ProfileSettingsDialog.tsx
+│   ├── StartPrivateChatDialog.tsx
+│   ├── MessageRequestsDialog.tsx
+│   └── CreateChatRoomDialog.tsx
+├── hooks/
+│   ├── useChatMessages.tsx  # Message fetch + realtime subscription
+│   └── useDMPrivacy.ts      # Block, delete, requests, privacy
+├── pages/
+│   ├── Index.tsx        # Landing page
+│   ├── LoginPage.tsx
+│   ├── RegisterPage.tsx
+│   ├── ChatPage.tsx     # Authenticated chat
+│   └── GuestChatPage.tsx
+└── lib/
+    └── supabase.ts      # Supabase client
+```
 
-- `pnpm dev` - Start the development server
-- `pnpm build` - Build the application for production
-- `pnpm build:dev` - Build the application for development
-- `pnpm lint` - Run ESLint to check for code issues
-- `pnpm preview` - Preview the production build locally
+## Built by
 
-## 🌐 Deployment
-
-This application is configured for deployment on Vercel (as indicated by the `vercel.json` file). To deploy:
-
-1. Push your code to a Git repository
-2. Connect your repository to Vercel
-3. Add the required environment variables in the Vercel dashboard
-4. Deploy!
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🆘 Support
-
-If you encounter any issues or have questions, please open an issue in the repository.
+**Touseef Ur Rehman** · Pakistan 🇵🇰

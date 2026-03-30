@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useRef, useEffect, useState, useCallback } from 'react';
+import React, { useRef, useEffect, useState, useCallback, memo } from 'react';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -53,7 +51,7 @@ interface ContextMenu {
   isOwn: boolean;
 }
 
-const MessageList: React.FC<MessageListProps> = ({ messages, currentUserId, chatType, onMessageDeleted }) => {
+const MessageList: React.FC<MessageListProps> = memo(({ messages, currentUserId, chatType, onMessageDeleted }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const { deleteMessage, blockUser } = useDMPrivacy();
@@ -227,6 +225,7 @@ const MessageList: React.FC<MessageListProps> = ({ messages, currentUserId, chat
       )}
     </>
   );
-};
+});
 
+MessageList.displayName = 'MessageList';
 export default MessageList;

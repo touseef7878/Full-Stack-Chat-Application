@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from '@/components/SessionContextProvider';
 import { showError } from '@/utils/toast';

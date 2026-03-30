@@ -1,6 +1,4 @@
-"use client";
-
-import React, { useState, useCallback, memo } from 'react';
+import React, { useState, useCallback, memo, useMemo } from 'react';
 import ChatLayout from '@/components/layout/ChatLayout';
 import MessageInput from '@/components/MessageInput';
 import MessageList from '@/components/MessageList';
@@ -18,8 +16,10 @@ const ChatPage: React.FC = memo(() => {
   const [selectedChatType, setSelectedChatType] = useState<'public' | 'private' | undefined>(undefined);
   const currentUserId = session?.user?.id;
 
-  // Use a stable reference for the key to prevent unnecessary re-renders
-  const chatKey = selectedChatId ? `${selectedChatId}-${selectedChatType}` : 'no-chat';
+  const chatKey = useMemo(
+    () => selectedChatId ? `${selectedChatId}-${selectedChatType}` : 'no-chat',
+    [selectedChatId, selectedChatType]
+  );
 
   const { messages, loadingMessages, sendMessage, isSending, deleteMessageLocally } = useChatMessages(selectedChatId, selectedChatType);
 
