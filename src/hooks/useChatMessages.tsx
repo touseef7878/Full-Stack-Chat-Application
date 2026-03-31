@@ -3,7 +3,7 @@ import { useSession } from '@/components/SessionContextProvider';
 import { showError } from '@/utils/toast';
 import { readMessageCache, writeMessageCache } from './useMessageCache';
 
-interface Message {
+export interface Message {
   id: string;
   sender_id: string;
   content: string;
@@ -11,6 +11,8 @@ interface Message {
   deleted_at?: string | null;
   chat_room_id?: string;
   private_chat_id?: string;
+  message_type?: 'text' | 'voice' | 'image' | 'file' | 'system';
+  voice_duration?: number; // seconds, stored in content as JSON for voice messages
   profile?: {
     username: string;
     avatar_url?: string;
@@ -43,7 +45,7 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
 
     const { data, error } = await supabase
       .from(type === 'public' ? 'messages' : 'private_messages')
-      .select(`id, created_at, sender_id, content, ${type === 'public' ? 'chat_room_id' : 'private_chat_id'}`)
+      .select(`id, created_at, sender_id, content, message_type, ${type === 'public' ? 'chat_room_id' : 'private_chat_id'}`)
       .eq(type === 'public' ? 'chat_room_id' : 'private_chat_id', id)
       .order('created_at', { ascending: true })
       .limit(200);
@@ -121,6 +123,69 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
     if (error) {
       showError("Failed to send message: " + error.message);
       // Revert only this specific optimistic message
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+    }
+  }, [chatId, chatType, currentUserId, supabase, session]);
+
+  const sendVoiceMessage = useCallback(async (blob: Blob, duration: number) => {
+    if (!chatId || !currentUserId || !chatType) {
+      showError("Cannot send voice message: chat context is not fully loaded.");
+      return;
+    }
+
+    const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+    const fileName = `${currentUserId}/${Date.now()}.${ext}`;
+
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('voice-messages')
+      .upload(fileName, blob, { contentType: blob.type, upsert: false });
+
+    if (uploadError) {
+      showError("Failed to upload voice message: " + uploadError.message);
+      return;
+    }
+
+    const { data: urlData } = supabase.storage
+      .from('voice-messages')
+      .getPublicUrl(uploadData.path);
+
+    const voiceUrl = urlData.publicUrl;
+    // Store URL + duration as JSON in content field
+    const content = JSON.stringify({ url: voiceUrl, duration });
+
+    const table = chatType === 'public' ? 'messages' : 'private_messages';
+    const chat_id_column = chatType === 'public' ? 'chat_room_id' : 'private_chat_id';
+
+    const userProfile = profileCacheRef.current[currentUserId] || {
+      username: session?.user?.user_metadata?.username || 'You',
+      avatar_url: session?.user?.user_metadata?.avatar_url,
+      first_name: session?.user?.user_metadata?.first_name,
+      last_name: session?.user?.user_metadata?.last_name,
+    };
+
+    const tempId = `temp-${Date.now()}`;
+    const optimisticMessage: Message = {
+      id: tempId,
+      sender_id: currentUserId,
+      content,
+      message_type: 'voice',
+      created_at: new Date().toISOString(),
+      [chat_id_column]: chatId,
+      profile: userProfile,
+    };
+
+    setMessages(prev => [...prev, optimisticMessage]);
+
+    const { error } = await supabase.from(table).insert({
+      [chat_id_column]: chatId,
+      sender_id: currentUserId,
+      content,
+      message_type: 'voice',
+    });
+
+    if (error) {
+      showError("Failed to send voice message: " + error.message);
       setMessages(prev => prev.filter(m => m.id !== tempId));
     }
   }, [chatId, chatType, currentUserId, supabase, session]);
@@ -232,5 +297,5 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
     ));
   }, []);
 
-  return { messages, loadingMessages, sendMessage, isSending, deleteMessageLocally };
+  return { messages, loadingMessages, sendMessage, sendVoiceMessage, isSending, deleteMessageLocally };
 };

@@ -24,7 +24,7 @@ const ChatPage: React.FC = memo(() => {
     [selectedChatId, selectedChatType]
   );
 
-  const { messages, loadingMessages, sendMessage, isSending, deleteMessageLocally } = useChatMessages(selectedChatId, selectedChatType);
+  const { messages, loadingMessages, sendMessage, sendVoiceMessage, isSending, deleteMessageLocally } = useChatMessages(selectedChatId, selectedChatType);
 
   const { typingUsers, emitTyping, emitStoppedTyping } = useTypingIndicator(selectedChatId, selectedChatType);
   const { onlineCount } = usePresence(selectedChatId, selectedChatType);
@@ -106,6 +106,11 @@ const ChatPage: React.FC = memo(() => {
       markChatAsRead(selectedChatId, selectedChatType);
     }
   }, [selectedChatId, selectedChatType, sendMessage, markChatAsRead]);
+
+  const handleSendVoice = useCallback(async (blob: Blob, duration: number) => {
+    if (!selectedChatId || !selectedChatType) return;
+    await sendVoiceMessage(blob, duration);
+  }, [selectedChatId, selectedChatType, sendVoiceMessage]);
 
   const handleBackToSidebar = useCallback(() => {
     setSelectedChatId(undefined);
@@ -211,6 +216,7 @@ const ChatPage: React.FC = memo(() => {
                 )}
                 <MessageInput
                   onSendMessage={handleSendMessage}
+                  onSendVoice={handleSendVoice}
                   isSending={isSending}
                   onTyping={emitTyping}
                   onStoppedTyping={emitStoppedTyping}

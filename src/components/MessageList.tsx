@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { Trash2, ShieldBan } from 'lucide-react';
 import { useDMPrivacy } from '@/hooks/useDMPrivacy';
 import type { TypingUser } from '@/hooks/useTypingIndicator';
+import VoiceMessagePlayer from './VoiceMessagePlayer';
 
 interface Message {
   id: string;
@@ -14,6 +15,7 @@ interface Message {
   deleted_at?: string | null;
   chat_room_id?: string;
   private_chat_id?: string;
+  message_type?: 'text' | 'voice' | 'image' | 'file' | 'system';
   profile?: {
     username: string;
     avatar_url?: string;
@@ -156,16 +158,33 @@ const MessageList: React.FC<MessageListProps> = memo(({ messages, currentUserId,
 
                   <div
                     className={cn(
-                      "px-3.5 py-2.5 text-sm leading-relaxed break-words",
                       isDeleted
-                        ? "bg-muted/50 text-muted-foreground italic rounded-2xl border border-border/40"
-                        : isCurrentUser
-                          ? "bg-[hsl(var(--accent-primary))] text-white rounded-2xl rounded-br-sm"
-                          : "bg-card border border-border/60 text-foreground rounded-2xl rounded-bl-sm",
+                        ? "px-3.5 py-2.5 text-sm leading-relaxed break-words bg-muted/50 text-muted-foreground italic rounded-2xl border border-border/40"
+                        : message.message_type === 'voice'
+                        ? "" // VoiceMessagePlayer has its own styling
+                        : cn(
+                            "px-3.5 py-2.5 text-sm leading-relaxed break-words",
+                            isCurrentUser
+                              ? "bg-[hsl(var(--accent-primary))] text-white rounded-2xl rounded-br-sm"
+                              : "bg-card border border-border/60 text-foreground rounded-2xl rounded-bl-sm"
+                          ),
                       isTemp && "opacity-60"
                     )}
                   >
-                    {isDeleted ? 'This message was deleted' : message.content}
+                    {isDeleted ? (
+                      'This message was deleted'
+                    ) : message.message_type === 'voice' ? (
+                      (() => {
+                        try {
+                          const { url, duration } = JSON.parse(message.content);
+                          return <VoiceMessagePlayer src={url} duration={duration} isOwn={isCurrentUser} />;
+                        } catch {
+                          return <span className="text-sm text-muted-foreground italic">Voice message</span>;
+                        }
+                      })()
+                    ) : (
+                      message.content
+                    )}
                   </div>
 
                   {!isFirstInGroup && (
