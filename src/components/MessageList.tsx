@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Trash2, ShieldBan } from 'lucide-react';
 import { useDMPrivacy } from '@/hooks/useDMPrivacy';
+import type { TypingUser } from '@/hooks/useTypingIndicator';
 
 interface Message {
   id: string;
@@ -26,6 +27,7 @@ interface MessageListProps {
   currentUserId: string | undefined;
   chatType?: 'public' | 'private';
   onMessageDeleted?: (messageId: string) => void;
+  typingUsers?: TypingUser[];
 }
 
 const isEmail = (str: string) => /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/.test(str);
@@ -51,7 +53,7 @@ interface ContextMenu {
   isOwn: boolean;
 }
 
-const MessageList: React.FC<MessageListProps> = memo(({ messages, currentUserId, chatType, onMessageDeleted }) => {
+const MessageList: React.FC<MessageListProps> = memo(({ messages, currentUserId, chatType, onMessageDeleted, typingUsers = [] }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const { deleteMessage, blockUser } = useDMPrivacy();
@@ -187,6 +189,24 @@ const MessageList: React.FC<MessageListProps> = memo(({ messages, currentUserId,
           <div ref={messagesEndRef} />
         </div>
       </ScrollArea>
+
+      {/* Typing indicator */}
+      {typingUsers.length > 0 && (
+        <div className="px-4 py-1.5 flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex gap-0.5 items-center">
+            <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:0ms]" />
+            <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:150ms]" />
+            <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce [animation-delay:300ms]" />
+          </div>
+          <span>
+            {typingUsers.length === 1
+              ? `${typingUsers[0].username} is typing…`
+              : typingUsers.length === 2
+              ? `${typingUsers[0].username} and ${typingUsers[1].username} are typing…`
+              : `${typingUsers.length} people are typing…`}
+          </span>
+        </div>
+      )}
 
       {/* Context menu */}
       {contextMenu && (

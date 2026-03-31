@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useSession } from '@/components/SessionContextProvider';
 import { showError } from '@/utils/toast';
+import { readMessageCache, writeMessageCache } from './useMessageCache';
 
 interface Message {
   id: string;
@@ -30,17 +31,26 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
 
   const fetchMessages = useCallback(async (id: string, type: 'public' | 'private') => {
     if (!id || !type) return;
-    setLoadingMessages(true);
+
+    // Instantly load from cache while fetching fresh data
+    const cached = readMessageCache(id, type);
+    if (cached.length > 0) {
+      setMessages(cached);
+      setLoadingMessages(false);
+    } else {
+      setLoadingMessages(true);
+    }
 
     const { data, error } = await supabase
       .from(type === 'public' ? 'messages' : 'private_messages')
       .select(`id, created_at, sender_id, content, ${type === 'public' ? 'chat_room_id' : 'private_chat_id'}`)
       .eq(type === 'public' ? 'chat_room_id' : 'private_chat_id', id)
-      .order('created_at', { ascending: true });
+      .order('created_at', { ascending: true })
+      .limit(200);
 
     if (error) {
       showError("Failed to load messages: " + error.message);
-      setMessages([]);
+      if (cached.length === 0) setMessages([]);
       setLoadingMessages(false);
       return;
     }
@@ -67,6 +77,8 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
 
     setMessages(processedData as Message[]);
     setLoadingMessages(false);
+    // Persist to localStorage cache
+    writeMessageCache(id, type, processedData);
   }, [supabase]);
 
   const sendMessage = useCallback(async (content: string) => {
@@ -168,6 +180,13 @@ export const useChatMessages = (chatId: string | undefined, chatType: 'public' |
         }
 
         return [...prev, messageWithProfile];
+      });
+
+      // Update localStorage cache after real message arrives
+      setMessages(prev => {
+        const persisted = prev.filter(m => !m.id.startsWith('temp-'));
+        writeMessageCache(chatId, chatType, persisted);
+        return prev;
       });
     };
 

@@ -7,22 +7,27 @@ import { Link } from 'react-router-dom';
 interface MessageInputProps {
   onSendMessage: (message: string) => Promise<void> | void;
   isSending?: boolean;
+  onTyping?: () => void;
+  onStoppedTyping?: () => void;
 }
 
-const MessageInput: React.FC<MessageInputProps> = memo(({ onSendMessage, isSending = false }) => {
+const MessageInput: React.FC<MessageInputProps> = memo(({ onSendMessage, isSending = false, onTyping, onStoppedTyping }) => {
   const { isGuest } = useSession();
   const [message, setMessage] = useState('');
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSend = useCallback(async () => {
     if (message.trim() && !isGuest && !isSending) {
       const content = message.trim();
       setMessage('');
-      // Reset textarea height
       if (inputRef.current) inputRef.current.style.height = 'auto';
+      // Stop typing indicator on send
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      onStoppedTyping?.();
       await onSendMessage(content);
     }
-  }, [message, onSendMessage, isGuest, isSending]);
+  }, [message, onSendMessage, isGuest, isSending, onStoppedTyping]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey && !isGuest && !isSending) {
@@ -34,11 +39,23 @@ const MessageInput: React.FC<MessageInputProps> = memo(({ onSendMessage, isSendi
   const handleChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!isGuest) {
       setMessage(e.target.value);
-      // Auto-resize
       e.target.style.height = 'auto';
       e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+
+      // Emit typing event
+      if (e.target.value.trim()) {
+        onTyping?.();
+        // Auto-stop after 2.5s of no keystrokes
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        typingTimeoutRef.current = setTimeout(() => {
+          onStoppedTyping?.();
+        }, 2500);
+      } else {
+        if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+        onStoppedTyping?.();
+      }
     }
-  }, [isGuest]);
+  }, [isGuest, onTyping, onStoppedTyping]);
 
   if (isGuest) {
     return (

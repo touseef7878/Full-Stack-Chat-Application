@@ -5,6 +5,8 @@ import MessageList from '@/components/MessageList';
 import { showError } from '@/utils/toast';
 import { useSession } from '@/components/SessionContextProvider';
 import { useChatMessages } from '@/hooks/useChatMessages';
+import { useTypingIndicator } from '@/hooks/useTypingIndicator';
+import { usePresence } from '@/hooks/usePresence';
 import AndroidBackHandler from '@/components/AndroidBackHandler';
 
 // Dynamically import Sidebar to reduce initial bundle size
@@ -23,6 +25,9 @@ const ChatPage: React.FC = memo(() => {
   );
 
   const { messages, loadingMessages, sendMessage, isSending, deleteMessageLocally } = useChatMessages(selectedChatId, selectedChatType);
+
+  const { typingUsers, emitTyping, emitStoppedTyping } = useTypingIndicator(selectedChatId, selectedChatType);
+  const { onlineCount } = usePresence(selectedChatId, selectedChatType);
 
   const markChatAsRead = useCallback(async (chatId: string, chatType: 'public' | 'private') => {
     if (!currentUserId || isGuest) return;
@@ -146,6 +151,9 @@ const ChatPage: React.FC = memo(() => {
                     <h2 className="text-sm font-semibold leading-none truncate">{selectedChatName}</h2>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       {selectedChatType === 'public' ? 'Public room' : 'Direct message'}
+                      {onlineCount > 0 && (
+                        <span className="ml-1 text-green-500">· {onlineCount} online</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -173,6 +181,9 @@ const ChatPage: React.FC = memo(() => {
                     <h2 className="text-sm font-semibold leading-none truncate">{selectedChatName}</h2>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
                       {selectedChatType === 'public' ? 'Public room' : 'Direct message'}
+                      {onlineCount > 0 && (
+                        <span className="ml-1 text-green-500">· {onlineCount} online</span>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -195,9 +206,15 @@ const ChatPage: React.FC = memo(() => {
                     currentUserId={currentUserId}
                     chatType={selectedChatType}
                     onMessageDeleted={deleteMessageLocally}
+                    typingUsers={typingUsers}
                   />
                 )}
-                <MessageInput onSendMessage={handleSendMessage} isSending={isSending} />
+                <MessageInput
+                  onSendMessage={handleSendMessage}
+                  isSending={isSending}
+                  onTyping={emitTyping}
+                  onStoppedTyping={emitStoppedTyping}
+                />
               </>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-muted-foreground p-8 gap-3">
