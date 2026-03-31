@@ -11,23 +11,26 @@ import SessionContextProvider from "./components/SessionContextProvider";
 import ProtectedRoute from "./components/ProtectedRoute";
 import GuestRoute from "./components/GuestRoute";
 import { ThemeProvider } from "@/components/theme-provider";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 const App = () => (
-  <BrowserRouter>
-    <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
-      <SessionContextProvider>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-          <Route path="/register" element={<AuthLayout><RegisterPage /></AuthLayout>} />
-          <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
-          <Route path="/chat/guest" element={<GuestRoute><GuestChatPage /></GuestRoute>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-        <Toaster />
-      </SessionContextProvider>
-    </ThemeProvider>
-  </BrowserRouter>
+  <ErrorBoundary>
+    <BrowserRouter>
+      <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
+        <SessionContextProvider>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+            <Route path="/register" element={<AuthLayout><RegisterPage /></AuthLayout>} />
+            <Route path="/chat" element={<ProtectedRoute><ChatPage /></ProtectedRoute>} />
+            <Route path="/chat/guest" element={<GuestRoute><GuestChatPage /></GuestRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+          <Toaster />
+        </SessionContextProvider>
+      </ThemeProvider>
+    </BrowserRouter>
+  </ErrorBoundary>
 );
 
 export default App;

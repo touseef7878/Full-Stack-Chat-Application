@@ -89,7 +89,6 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
       privates: privates.map((p) => ({ ...p, unread_count: privateCountMap[p.id] ?? 0 })),
     };
   }, [currentUserId, supabase, isGuest]);
-
   const fetchChats = useCallback(async (silent = false) => {
     if (!currentUserId && !isGuest) {
       setInitialLoading(false);
@@ -130,7 +129,6 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
         else if (privateConvos) {
           privates = privateConvos
             .map((convo: any) => {
-              // Supabase returns foreign key joins as objects, not arrays
               const u1 = Array.isArray(convo.user1) ? convo.user1[0] : convo.user1;
               const u2 = Array.isArray(convo.user2) ? convo.user2[0] : convo.user2;
               if (!u1 || !u2) return null;
@@ -351,6 +349,7 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
                             <AvatarImage
                               src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${chat.name}`}
                               alt={chat.name}
+                              loading="lazy"
                             />
                             <AvatarFallback className="bg-accent/20">
                               <Users className="h-5 w-5" />
@@ -410,6 +409,7 @@ const Sidebar: React.FC<SidebarProps> = ({ selectedChatId, selectedChatType, onS
                                 `https://api.dicebear.com/7.x/lorelei/svg?seed=${chat.other_user_profile.id}`
                               }
                               alt={displayName}
+                              loading="lazy"
                             />
                             <AvatarFallback className="bg-[hsl(var(--accent-primary)/0.15)] text-[hsl(var(--accent-primary))] font-semibold text-sm">
                               {displayName.charAt(0).toUpperCase()}

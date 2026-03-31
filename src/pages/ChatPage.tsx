@@ -37,7 +37,7 @@ const ChatPage: React.FC = memo(() => {
         .eq('user_id', currentUserId)
         .eq('chat_room_id', chatId)
         .single();
-    } else { // private
+    } else {
       existingReadStatusQuery = supabase
         .from('user_chat_read_status')
         .select('id')
@@ -49,14 +49,12 @@ const ChatPage: React.FC = memo(() => {
     const { data: existingReadStatus, error: selectError } = await existingReadStatusQuery;
 
     let error;
-    if (selectError && selectError.code !== 'PGRST116') { // PGRST116 means "no rows found"
+    if (selectError && selectError.code !== 'PGRST116') {
       console.error("Error checking existing read status:", selectError);
-      showError("Failed to check read status: " + selectError.message);
       return;
     }
 
     if (existingReadStatus) {
-      // If a record exists, update it
       const updateData = { last_read_at: now };
       let updateQuery;
       if (chatType === 'public') {
@@ -72,7 +70,6 @@ const ChatPage: React.FC = memo(() => {
       }
       ({ error } = await updateQuery);
     } else {
-      // If no record exists, insert a new one
       const insertData = {
         user_id: currentUserId,
         last_read_at: now,
@@ -84,9 +81,8 @@ const ChatPage: React.FC = memo(() => {
 
     if (error) {
       console.error("Error marking chat as read:", error);
-      showError("Failed to mark chat as read: " + error.message);
     }
-  }, [currentUserId, supabase]);
+  }, [currentUserId, supabase, isGuest]);
 
   const handleSelectChat = useCallback((chatId: string, chatName: string, chatType: 'public' | 'private') => {
     setSelectedChatId(chatId);
@@ -95,20 +91,22 @@ const ChatPage: React.FC = memo(() => {
     markChatAsRead(chatId, chatType);
   }, [markChatAsRead]);
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = useCallback(async (content: string) => {
     if (!selectedChatId || !selectedChatType) {
       showError("Please select a chat to send a message.");
       return;
     }
     await sendMessage(content);
-    markChatAsRead(selectedChatId, selectedChatType); // Mark as read after sending
-  };
+    if (selectedChatId && selectedChatType) {
+      markChatAsRead(selectedChatId, selectedChatType);
+    }
+  }, [selectedChatId, selectedChatType, sendMessage, markChatAsRead]);
 
-  const handleBackToSidebar = () => {
+  const handleBackToSidebar = useCallback(() => {
     setSelectedChatId(undefined);
     setSelectedChatName(undefined);
     setSelectedChatType(undefined);
-  };
+  }, []);
 
   return (
     <div className="h-[100dvh] flex flex-col bg-background text-foreground">
@@ -139,6 +137,7 @@ const ChatPage: React.FC = memo(() => {
                         src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${selectedChatName}`}
                         alt={selectedChatName}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     </div>
                     <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full ring-2 ring-background" />
@@ -165,6 +164,7 @@ const ChatPage: React.FC = memo(() => {
                         src={`https://api.dicebear.com/7.x/lorelei/svg?seed=${selectedChatName}`}
                         alt={selectedChatName}
                         className="w-full h-full object-cover"
+                        loading="lazy"
                       />
                     </div>
                     <div className="absolute bottom-0 right-0 w-2 h-2 bg-green-500 rounded-full ring-2 ring-background" />
